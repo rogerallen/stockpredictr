@@ -1,0 +1,105 @@
+<html>
+  <head>
+    <title>Stockpickr Contest #{{contest.key.id}}</title>
+    <link type="text/css" rel="stylesheet" href="/stylesheets/republic/style.css" />
+  </head>
+
+  <body>
+  <div id="wrapper">
+    <div id="header">
+      <div id="logo">
+        <h1><a href="/">Stockpredictr</a></h1>
+        <p>Contest:<a href="/contest/{{contest.key.id}}">
+          {{ contest.stock.symbol }} - 
+          {{ contest.owner.user.nickname }} -
+          {{ contest.close_date }}</a></p>
+      </div> <!-- end #logo -->
+    </div> <!-- end #header -->
+    <div id="menu">
+      <ul>
+	<li><a href="/">Home</a></li>
+	<li><a href="/about">About</a></li>
+	<li><a href="{{ url }}">{{ url_linktext }}</a></li>
+      </ul>
+    </div> <!-- end #menu -->
+    <div id="page">
+      <div id="page-bgtop">
+        <div id="page-bgbtm">
+          <div id="content">
+            <div class="post">
+              <h2 class="title">Contest Entries</h2>
+              <div class="entry">
+                <ul>
+                  {% for prediction in predictions %}
+                    <li> 
+                    {% if prediction.winner %}
+                      <b> WINNER! - 
+                    {% endif %}
+                    {{ prediction.value }} -
+                    {{ prediction.user.user.nickname }}
+                    {% if prediction.winner %}
+                      </b>
+                    <li> <b>Final Value = {{ contest.final_value }}</b>
+                    {% endif %}
+                  {% endfor %}
+                </ul>
+              </div> <!-- end #entry -->
+            </div> <!-- end #post -->
+
+            {% if logged_in_flag and open_flag %}
+              <div class="post">
+                <h2 class="title">Enter your Prediction</h2>
+                <div class="entry">
+                  <p>Enter your prediction here.  You may update it until the
+                    contest is closed</p>
+                  <form action="/new_prediction/{{contest.key.id}}" method="post">
+                    <div>Prediction: <textarea name="prediction" rows="1" cols="10"></textarea></div>
+                    <div><input type="submit" value="Enter"></div>
+                  </form>
+                </div> <!-- end #entry -->
+              </div> <!-- end #post -->
+
+            {% endif %}
+
+            {% if owner_flag %}
+              <div class="post">
+                <h2 class="title">Finish Contest</h2>
+                <div class="entry">
+                  <p>You are the owner of the contest.  Enter this value when
+                    the contest should close.</p>
+                  <form action="/finish/{{contest.key.id}}" method="post">
+                    <div>Final Value: <textarea name="final_value" rows="1" cols="10"></textarea></div>
+                    <div><input type="submit" value="Finalize"></div>
+                  </form>
+                </div> <!-- end #entry -->
+              </div> <!-- end #post -->
+            {% endif %}
+
+          </div> <!-- end #content -->
+x
+	  <div id="sidebar">
+	    <ul>
+	      <li>&nbsp;</li>
+              <li>
+		<h2>Welcome & Warning</h2>
+		<p>Welcome to Stockpredictr.  This site is being
+		actively developed and the software is
+		alpha-quality.  Play around, but be warned that data
+		loss is quite likely.</p>
+	      </li>
+	    </ul>
+	  </div>
+	  <!-- end #sidebar -->
+	  <div style="clear: both;">&nbsp;</div>
+
+        </div> <!-- end #page-bgbtm -->
+      </div> <!-- end #page-bgtop -->
+    </div> <!-- end #page -->
+  </div> <!-- end #wrapper -->
+
+  <div id="footer">
+    <p>Copyright (c) 2008 Stockpredictr. All rights reserved. Design by <a href="http://www.freecsstemplates.org/">Free CSS Templates</a>.</p>
+  </div> <!-- end #footer -->
+
+  </body>
+</html>

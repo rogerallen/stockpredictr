@@ -1,0 +1,86 @@
+<html>
+  <head>
+    <title>Stockpickr</title>
+    <link type="text/css" rel="stylesheet" href="/stylesheets/republic/style.css" />
+  </head>
+
+  <body>
+  <div id="wrapper">
+    <div id="header">
+      <div id="logo">
+        <h1><a href="/">Stockpredictr</a></h1>
+        <p>Satisfy your predilection for prediction.</p>
+      </div> <!-- end #logo -->
+    </div> <!-- end #header -->
+    <div id="menu">
+      <ul>
+	<li class="current_page_item"><a href="/">Home</a></li>
+	<li><a href="/about">About</a></li>
+	<li><a href="{{ url }}">{{ url_linktext }}</a></li>
+      </ul>
+    </div> <!-- end #menu -->
+    <div id="page">
+      <div id="page-bgtop">
+        <div id="page-bgbtm">
+          <div id="content">
+            <div class="post">
+              <h2 class="title">Current Contests</h2>
+              <div class="entry">
+                <ul>
+                  {% for contest in contests %}
+                    <li> <a href="contest/{{contest.key.id}}">
+                        {{ contest.stock.symbol }} - 
+                        {{ contest.owner.user.nickname }} -
+                        {{ contest.close_date }}</a> </li>
+                  {% endfor %}
+                </ul>
+              </div> <!-- end #entry -->
+            </div> <!-- end #post -->
+
+            {% if logged_in_flag %}
+              <div class="post">
+                <h2 class="title">Create A New Contest</h2>
+                <div class="entry">
+                  <form action="/new_contest" method="post">
+                    <div>Stock Symbol: <textarea name="symbol" rows="1" cols="10"></textarea></div>
+                    <div>
+                      Date: YYYY/MM/DD
+                      <textarea name="year" rows="1" cols="4"></textarea> /
+                      <textarea name="month" rows="1" cols="2"></textarea> /
+                      <textarea name="day" rows="1"
+                      cols="2"></textarea>
+                    </div>
+                    <div><input type="submit" value="Create"></div>
+                  </form>
+                </div> <!-- end #entry -->
+              </div> <!-- end #post -->
+            {% endif %}
+
+          </div> <!-- end #content -->
+x
+	  <div id="sidebar">
+	    <ul>
+	      <li>&nbsp;</li>
+              <li>
+		<h2>Welcome & Warning</h2>
+		<p>Welcome to Stockpredictr.  This site is being
+		actively developed and the software is
+		alpha-quality.  Play around, but be warned that data
+		loss is quite likely.</p>
+	      </li>
+	    </ul>
+	  </div>
+	  <!-- end #sidebar -->
+	  <div style="clear: both;">&nbsp;</div>
+
+        </div> <!-- end #page-bgbtm -->
+      </div> <!-- end #page-bgtop -->
+    </div> <!-- end #page -->
+  </div> <!-- end #wrapper -->
+
+  <div id="footer">
+    <p>Copyright (c) 2008 Stockpredictr. All rights reserved. Design by <a href="http://www.freecsstemplates.org/">Free CSS Templates</a>.</p>
+  </div> <!-- end #footer -->
+
+  </body>
+</html>
