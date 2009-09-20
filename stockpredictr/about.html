@@ -16,7 +16,10 @@
       <ul>
 	<li><a href="/">Home</a></li>
 	<li class="current_page_item"><a href="/about">About</a></li>
-	<li><a href="{{ url }}">{{ url_linktext }}</a></li>
+        {% if cur_user %}
+          <li><a href="/user/{{cur_user.key.id}}">Preferences</a></li>
+        {% endif %}
+	<li><a href="{{ login_url }}">{{ login_url_linktext }}</a></li>
       </ul>
     </div> <!-- end #menu -->
     <div id="page">

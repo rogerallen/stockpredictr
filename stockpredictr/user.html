@@ -1,6 +1,6 @@
 <html>
   <head>
-    <title>Stockpredictr Contest #{{contest.key.id}}</title>
+    <title>Stockpredictr User #{{the_user.key.id}}</title>
     <link type="text/css" rel="stylesheet" href="/stylesheets/republic/style.css" />
   </head>
 
@@ -10,10 +10,8 @@
       <div id="logo">
         <h1><a href="/">Stockpredictr</a></h1>
         <br>
-        <p>Contest:<a href="/contest/{{contest.key.id}}">
-          {{ contest.stock.symbol }} -
-          {{ contest.close_date }}</a> by 
-          <a href="/user/{{contest.owner.key.id}}">{{ contest.owner.nickname }}</a></p>
+        <p>User: <a href="/user/{{the_user.key.id}}">
+          {{ the_user.nickname }}</a></p>
       </div> <!-- end #logo -->
     </div> <!-- end #header -->
     <div id="menu">
@@ -31,7 +29,7 @@
         <div id="page-bgbtm">
           <div id="content">
             <div class="post">
-              <h2 class="title">Contest Entries</h2>
+              <h2 class="title">Predictions</h2>
               <div class="entry">
                 <ul>
                   {% for prediction in predictions %}
@@ -39,47 +37,48 @@
                     {% if prediction.winner %}
                       <b> WINNER! - 
                     {% endif %}
-                    {{ prediction.value }} -
-                    <a href="/user/{{ prediction.user.key.id }}">
-                      {{ prediction.user.nickname }}
+                    <a href="/contest/{{prediction.contest.key.id}}">
+                      {{ prediction.value }} -
+                      {{ prediction.contest.stock.symbol }} -
+                      {{ prediction.contest.close_date }}
                     </a>
                     {% if prediction.winner %}
                       </b>
-                    <li> <b>Final Value = {{ contest.final_value }}</b>
                     {% endif %}
                   {% endfor %}
                 </ul>
               </div> <!-- end #entry -->
             </div> <!-- end #post -->
 
-            {% if logged_in_flag and open_flag %}
+            {% if authorized_to_edit %}
               <div class="post">
-                <h2 class="title">Enter Your Prediction</h2>
-                <div class="entry">
-                  <p>Enter your prediction here.  You may update it until the
-                    contest is closed</p>
-                  <form action="/new_prediction/{{contest.key.id}}" method="post">
-                    Prediction: 
-                    <input type="text" name="prediction">
+                <h2 class="title">Update Your User Data</h2>
+                <div id="search" class="entry">
+                  <p>You may update your own user info here.</p>
+                  <form action="/update_user/{{the_user.key.id}}" method="post">
+                    Nickname: <input type="text" name="nickname" value="{{ the_user.nickname }}">
                   </form>
                 </div> <!-- end #entry -->
               </div> <!-- end #post -->
-
-            {% endif %}
-
-            {% if owner_flag %}
+	      <div style="clear: both;">&nbsp;</div>
               <div class="post">
-                <h2 class="title">Finish The Contest</h2>
+                <h2 class="title">Your Google Info</h2>
                 <div class="entry">
-                  <p>You are the owner of the contest.  Enter this value when
-                    the contest should close.  A negative value keeps
-                    the contest open.</p>
-                  <form action="/finish/{{contest.key.id}}" method="post">
-                    Final Value: 
-                    <input type="text" name="final_value" value="{{contest.final_value}}">
-                  </form>
+                  <p>This is the info from Google on you:</p>
+                  <table>
+                    <tr>
+                      <th>Nickname</th>
+                      <td>{{the_user.user.nickname}}</td>
+                      <td>(this is different from Stockpredictr's nickname)</td>
+                    </tr>
+                    <tr>
+                      <th>Email</th>
+                      <td>{{the_user.user.email}}</td>
+                    </tr>
+                  </table>
                 </div> <!-- end #entry -->
               </div> <!-- end #post -->
+
             {% endif %}
 
           </div> <!-- end #content -->

@@ -15,7 +15,7 @@ class Stock(db.Model):
   symbol = db.StringProperty()
   
 class MyUser(db.Model):
-  # just in case I want more info
+  nickname = db.StringProperty() # custom nickname for this site
   user = db.UserProperty()
 
 class Contest(db.Model):
@@ -34,20 +34,26 @@ class Prediction(db.Model):
 # data utils
 def get_my_current_user():
   """return the MyUser for the current_user, adding if necessary"""
+  if users.get_current_user() == None:
+    return None
+  
   my_users = db.GqlQuery("SELECT * FROM MyUser WHERE user = :1",
                          users.get_current_user()).fetch(10)
   if len(my_users) == 0:
     logging.info('adding current user %s to db' % (users.get_current_user().nickname()))
     my_user = MyUser()
-    my_user.user = users.get_current_user()
+    my_user.user     = users.get_current_user()
+    my_user.nickname = users.get_current_user().nickname()
     my_user.put()
   else:
     assert(len(my_users) == 1)
     my_user = my_users[0]
+  logging.info('get_my_current_user %s' % (my_user.nickname))
   return my_user
 
 def get_stock_from_symbol(symbol):
   """return the Stock for the symbol"""
+  symbol = symbol.upper()
   stocks   = db.GqlQuery("SELECT * FROM Stock WHERE symbol = :1",
                          symbol).fetch(1)
   if len(stocks) == 0:
@@ -60,28 +66,34 @@ def get_stock_from_symbol(symbol):
     stock = stocks[0]
   return stock
 
+def get_login_url_info(cls):
+  """return (logged_in_flag, login_url, login_url_linktext)"""
+  logged_in_flag = False
+  if users.get_current_user():
+    login_url = users.create_logout_url(cls.request.uri)
+    login_url_linktext = 'Logout'
+    logged_in_flag = True
+  else:
+    login_url = users.create_login_url(cls.request.uri)
+    login_url_linktext = 'Login'  
+  return (logged_in_flag, login_url, login_url_linktext)
+  
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # our webpages
 class MainPage(webapp.RequestHandler):
   def get(self):
     contests_query = Contest.all().order('close_date')
     contests = contests_query.fetch(10)
-
-    # XXX give ability to create only if user exists
-    logged_in_flag = False
-    if users.get_current_user():
-      url = users.create_logout_url(self.request.uri)
-      url_linktext = 'Logout'
-      logged_in_flag = True
-    else:
-      url = users.create_login_url(self.request.uri)
-      url_linktext = 'Login'
+    (logged_in_flag, login_url, login_url_linktext) = get_login_url_info(self)
+    cur_user = get_my_current_user()
 
     template_values = {
-      'contests':     contests,
-      'url':          url,
-      'url_linktext': url_linktext,
-      'logged_in_flag': logged_in_flag,
+      'contests':           contests,
+      'cur_user':            cur_user,
+      'login_url':          login_url,
+      'login_url_linktext': login_url_linktext,
+      'logged_in_flag':     logged_in_flag,
       }
     
     path = os.path.join(os.path.dirname(__file__), 'index.html')
@@ -89,15 +101,12 @@ class MainPage(webapp.RequestHandler):
 
 class About(webapp.RequestHandler):
   def get(self):
-    if users.get_current_user():
-      url = users.create_logout_url(self.request.uri)
-      url_linktext = 'Logout'
-    else:
-      url = users.create_login_url(self.request.uri)
-      url_linktext = 'Login'
+    (logged_in_flag, login_url, login_url_linktext) = get_login_url_info(self)
+    cur_user = get_my_current_user()
     template_values = {
-      'url':          url,
-      'url_linktext': url_linktext,
+      'cur_user':            cur_user,
+      'login_url':          login_url,
+      'login_url_linktext': login_url_linktext,
       }
     path = os.path.join(os.path.dirname(__file__), 'about.html')
     self.response.out.write(template.render(path, template_values))
@@ -106,54 +115,51 @@ class CreateContest(webapp.RequestHandler):
   def post(self):
     try:
       if users.get_current_user():
-        my_user = get_my_current_user()
+        logging.info('got user')
+        cur_user = get_my_current_user()
+        logging.info('got myuser')
         stock = get_stock_from_symbol(self.request.get('symbol'))
         logging.info('adding contest to db')
         contest = Contest()
-        contest.owner       = my_user
+        contest.owner       = cur_user
         contest.stock       = stock
         contest.close_date  = datetime.date(int(self.request.get('year')),
                                             int(self.request.get('month')),
                                             int(self.request.get('day')))
         contest.final_value = -1.0
         contest.put()
+        logging.info("contest id"+str(contest.key().id()))
+        self.redirect('/contest/'+str(contest.key().id()))
     except:
       logging.info("caught some error")
+      self.redirect('/')
   
-    self.redirect('/')
 
 class ViewContest(webapp.RequestHandler):
-  def get(self,id):
-    logging.info("ViewContest/%d" % int(id))
-    contest = Contest.get_by_id(long(id))
+  def get(self,contest_id):
+    logging.info("ViewContest/%d" % int(contest_id))
+    contest = Contest.get_by_id(long(contest_id))
     
     prediction_query = db.GqlQuery("SELECT * FROM Prediction WHERE contest = :1 ORDER BY value DESC",
                                    contest)
     predictions = prediction_query.fetch(100) # xxx multiple pages?
 
-    # XXX give ability to create only if user exists
-    # use decorator
-    logged_in_flag = False
-    if users.get_current_user():
-      url = users.create_logout_url(self.request.uri)
-      url_linktext = 'Logout'
-      logged_in_flag = True
-    else:
-      url = users.create_login_url(self.request.uri)
-      url_linktext = 'Login'
+    (logged_in_flag, login_url, login_url_linktext) = get_login_url_info(self)
 
     owner_flag = users.get_current_user() == contest.owner.user
     open_flag = contest.final_value < 0.0
     logging.info("owner %s curuser %s owner_flag %s lif %s open_flag %s" %
                  ( contest.owner.user, users.get_current_user(), owner_flag, logged_in_flag, open_flag ))
+    cur_user = get_my_current_user()
     template_values = {
-      'contest':      contest,
-      'predictions':  predictions,
-      'url':          url,
-      'url_linktext': url_linktext,
-      'owner_flag':   owner_flag,
-      'open_flag':    open_flag,
-      'logged_in_flag': logged_in_flag,
+      'contest':            contest,
+      'predictions':        predictions,
+      'owner_flag':         owner_flag,
+      'open_flag':          open_flag,
+      'cur_user':            cur_user,
+      'login_url':          login_url,
+      'login_url_linktext': login_url_linktext,
+      'logged_in_flag':     logged_in_flag,
       }
     
     path = os.path.join(os.path.dirname(__file__), 'contest.html')
@@ -165,10 +171,10 @@ class EditPrediction(webapp.RequestHandler):
       logging.info("EditPrediction/%d" % int(contest_id))
       if users.get_current_user():
         contest = Contest.get_by_id(long(contest_id))
-        my_user = get_my_current_user()
+        cur_user = get_my_current_user()
         value = float(self.request.get('prediction'))
         prediction_query = db.GqlQuery("SELECT * FROM Prediction WHERE user = :1 AND contest = :2",
-                                       my_user,
+                                       cur_user,
                                        contest)
         predictions = prediction_query.fetch(2)
         if predictions:
@@ -178,7 +184,7 @@ class EditPrediction(webapp.RequestHandler):
         else:
           logging.info('adding prediction to db')
           prediction = Prediction()
-        prediction.user       = my_user
+        prediction.user       = cur_user
         prediction.contest    = contest
         prediction.value      = value
         prediction.winner     = False
@@ -191,7 +197,7 @@ class EditPrediction(webapp.RequestHandler):
 class FinishContest(webapp.RequestHandler):
   def post(self,contest_id):
     try:
-      logging.info("ViewContest/%d" % int(contest_id))
+      logging.info("FinishContest/%d" % int(contest_id))
       contest = Contest.get_by_id(long(contest_id))
 
       contest.final_value = float(self.request.get('final_value'))
@@ -218,14 +224,54 @@ class FinishContest(webapp.RequestHandler):
 
     self.redirect('/contest/'+contest_id)
 
+class ViewUser(webapp.RequestHandler):
+  def get(self,user_id):
+    logging.info("ViewUser/%d" % int(user_id))
+    the_user = MyUser.get_by_id(long(user_id))
+    authorized_to_edit = the_user.user == users.get_current_user()
+    prediction_query = db.GqlQuery("SELECT * FROM Prediction WHERE user = :1",
+                                   #ORDER BY contest.close_date DESC",
+                                   the_user)
+    predictions = prediction_query.fetch(100) # xxx multiple pages?
+    (logged_in_flag, login_url, login_url_linktext) = get_login_url_info(self)
+    cur_user = get_my_current_user()
+    template_values = {
+      'the_user':           the_user,
+      'predictions':        predictions,
+      'authorized_to_edit': authorized_to_edit,
+      'cur_user':           cur_user,
+      'login_url':          login_url,
+      'login_url_linktext': login_url_linktext,
+      'logged_in_flag':     logged_in_flag,
+      }
+    path = os.path.join(os.path.dirname(__file__), 'user.html')
+    self.response.out.write(template.render(path, template_values))
+
+class UpdateUser(webapp.RequestHandler):
+  def post(self,user_id):
+     try:
+       logging.info("UpdateUser/%d" % int(user_id))
+       my_user = MyUser.get_by_id(long(user_id))
+       if my_user.user == users.get_current_user():
+         my_user.nickname = self.request.get('nickname')
+         my_user.put()
+         logging.info('updated nickname to %s' % (new_nickname))
+     except:
+       logging.info("caught some error")
+     self.redirect('/user/'+user_id)
+
+
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 application = webapp.WSGIApplication(
-  [ ('/',     MainPage),  # see list of contests
-    ('/about', About),
-    ('/new_contest', CreateContest),
-    (r'/contest/(.*)', ViewContest), # list predictions/winner for particular contest
-    (r'/new_prediction/(.*)', EditPrediction),
-    (r'/finish/(.*)', FinishContest)
+  [ ( '/',                    MainPage),       # GET list of contests
+    ( '/about',               About),          # GET what is this site about?
+    ( '/new_contest',         CreateContest),  # POST a new contest
+    (r'/contest/(.*)',        ViewContest),    # GET list predictions
+    (r'/new_prediction/(.*)', EditPrediction), # POST prediction
+    (r'/finish/(.*)',         FinishContest),  # POST contest end
+    (r'/user/(.*)',           ViewUser),       # GET user attributes
+    (r'/update_user/(.*)',    UpdateUser),     # POST user attributes
     ],
   debug=True)
 

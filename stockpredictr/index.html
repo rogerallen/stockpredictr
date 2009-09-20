@@ -16,7 +16,10 @@
       <ul>
 	<li class="current_page_item"><a href="/">Home</a></li>
 	<li><a href="/about">About</a></li>
-	<li><a href="{{ url }}">{{ url_linktext }}</a></li>
+        {% if cur_user %}
+          <li><a href="/user/{{cur_user.key.id}}">Preferences</a></li>
+        {% endif %}
+	<li><a href="{{ login_url }}">{{ login_url_linktext }}</a></li>
       </ul>
     </div> <!-- end #menu -->
     <div id="page">
@@ -30,8 +33,9 @@
                   {% for contest in contests %}
                     <li> <a href="contest/{{contest.key.id}}">
                         {{ contest.stock.symbol }} - 
-                        {{ contest.owner.user.nickname }} -
-                        {{ contest.close_date }}</a> </li>
+                        {{ contest.close_date }}</a> -
+                        <a href="user/{{contest.owner.key.id}}">{{ contest.owner.nickname }}</a>
+                    </li>
                   {% endfor %}
                 </ul>
               </div> <!-- end #entry -->
@@ -40,24 +44,24 @@
             {% if logged_in_flag %}
               <div class="post">
                 <h2 class="title">Create A New Contest</h2>
-                <div class="entry">
+                <div id="search" class="entry">
                   <form action="/new_contest" method="post">
-                    <div>Stock Symbol: <textarea name="symbol" rows="1" cols="10"></textarea></div>
                     <div>
+                      Stock Symbol: 
+                      <input type="text" name="symbol" size="7" maxlength="7">
                       Date: YYYY/MM/DD
-                      <textarea name="year" rows="1" cols="4"></textarea> /
-                      <textarea name="month" rows="1" cols="2"></textarea> /
-                      <textarea name="day" rows="1"
-                      cols="2"></textarea>
+                      <input type="text" name="year"  size="4" maxlength="4"> /
+                      <input type="text" name="month" size="2" maxlength="2"> /
+                      <input type="text" name="day"   size="2" maxlength="2">
                     </div>
-                    <div><input type="submit" value="Create"></div>
+                    <input type="submit" value="Create">
                   </form>
                 </div> <!-- end #entry -->
               </div> <!-- end #post -->
             {% endif %}
 
           </div> <!-- end #content -->
-x
+
 	  <div id="sidebar">
 	    <ul>
 	      <li>&nbsp;</li>
