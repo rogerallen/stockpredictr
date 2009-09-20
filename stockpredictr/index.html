@@ -30,7 +30,22 @@
               <h2 class="title">Current Contests</h2>
               <div class="entry">
                 <ul>
-                  {% for contest in contests %}
+                  {% for contest in open_contests %}
+                    <li> <a href="contest/{{contest.key.id}}">
+                        {{ contest.stock.symbol }} - 
+                        {{ contest.close_date }}</a> -
+                        <a href="user/{{contest.owner.key.id}}">{{ contest.owner.nickname }}</a>
+                    </li>
+                  {% endfor %}
+                </ul>
+              </div> <!-- end #entry -->
+            </div> <!-- end #post -->
+
+            <div class="post">
+              <h2 class="title">Past Contests</h2>
+              <div class="entry">
+                <ul>
+                  {% for contest in closed_contests %}
                     <li> <a href="contest/{{contest.key.id}}">
                         {{ contest.stock.symbol }} - 
                         {{ contest.close_date }}</a> -

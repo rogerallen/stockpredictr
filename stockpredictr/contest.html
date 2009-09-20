@@ -45,9 +45,13 @@
                     </a>
                     {% if prediction.winner %}
                       </b>
-                    <li> <b>Final Value = {{ contest.final_value }}</b>
                     {% endif %}
                   {% endfor %}
+                  {% if open_flag %}
+                      <li> <b>Current Price = {{ stock_price }}</b>
+                  {% else %}
+                      <li> <b>Final Value = {{ contest.final_value }}</b>
+                  {% endif %}
                 </ul>
               </div> <!-- end #entry -->
             </div> <!-- end #post -->

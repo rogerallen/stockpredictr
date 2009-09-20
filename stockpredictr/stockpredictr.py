@@ -8,11 +8,15 @@ from google.appengine.ext import webapp
 from google.appengine.ext import db
 from google.appengine.ext.webapp import template
 from google.appengine.ext.webapp.util import run_wsgi_app
+from google.appengine.api import urlfetch
+from django.utils import simplejson
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # our databases
 class Stock(db.Model):
   symbol = db.StringProperty()
+  recent_price = db.FloatProperty()
+  recent_price_time = db.DateTimeProperty(auto_now=True)
   
 class MyUser(db.Model):
   nickname = db.StringProperty() # custom nickname for this site
@@ -51,16 +55,30 @@ def get_my_current_user():
   logging.info('get_my_current_user %s' % (my_user.nickname))
   return my_user
 
+def get_or_add_stock_from_symbol(symbol):
+  """get stock.  if it doesn't exist, add it to db"""
+  symbol = symbol.upper()
+  stock = get_stock_from_symbol(symbol)
+  if stock == None:
+    logging.info('validating stock %s' % (symbol))
+    stock_price = get_stock_price_uncached(symbol)
+    if type(stock_price) != type(float()):
+      logging.info('invalid stock')
+      return None
+    logging.info('adding stock %s and price %f to db' % (symbol, stock_price))
+    stock = Stock()
+    stock.symbol = symbol
+    stock.recent_price = stock_price
+    stock.put()
+  return stock
+
 def get_stock_from_symbol(symbol):
   """return the Stock for the symbol"""
   symbol = symbol.upper()
   stocks   = db.GqlQuery("SELECT * FROM Stock WHERE symbol = :1",
                          symbol).fetch(1)
   if len(stocks) == 0:
-    logging.info('adding stock %s to db' % (symbol))
-    stock = Stock()
-    stock.symbol = symbol
-    stock.put()
+    return None
   else:
     assert(len(stocks) == 1)
     stock = stocks[0]
@@ -77,20 +95,61 @@ def get_login_url_info(cls):
     login_url = users.create_login_url(cls.request.uri)
     login_url_linktext = 'Login'  
   return (logged_in_flag, login_url, login_url_linktext)
-  
+
+STOCK_CACHE_SECONDS = 60 # Update every minute, at most
+def get_stock_price(symbol):
+  """get stock price and cache the result"""
+  stock = get_stock_from_symbol(symbol)
+  if stock == None:
+    logging.info("didn't find symbol %s"%(symbol))
+    return "Unknown"
+  now = datetime.datetime.utcnow()
+  dt = now - stock.recent_price_time
+  #logging.info("now "+str(now))
+  #logging.info("dt  "+str(dt))
+  #logging.info("d   "+str(datetime.timedelta(0,STOCK_CACHE_SECONDS,0)))
+  if dt > datetime.timedelta(0,STOCK_CACHE_SECONDS,0):
+    logging.info("going to get stock price...")
+    stock_price = get_stock_price_uncached(symbol)
+    stock.recent_price = stock_price
+    stock.put()
+  else:
+    logging.info("returning cached stock price")
+    stock_price = stock.recent_price
+  return stock_price
+
+def get_stock_price_uncached(symbol):
+  stock_price_url = "http://brivierestockquotes.appspot.com/?q=%s" % (symbol)
+  stock_price_result = urlfetch.fetch(stock_price_url)
+  if stock_price_result.status_code == 200:
+    tmp = stock_price_result.content.replace(',]',']')
+    logging.info("stock response = %s" % (tmp))
+    stock_data = simplejson.loads(tmp)
+    if len(stock_data) > 0:
+      stock_price = float(stock_data[0]["price"])
+    else:
+      stock_price = "Unknown"
+  else:
+    stock_price = "Unavailable"
+  logging.info("stock price = %s" % (stock_price))
+  return stock_price
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # our webpages
 class MainPage(webapp.RequestHandler):
   def get(self):
-    contests_query = Contest.all().order('close_date')
-    contests = contests_query.fetch(10)
+    open_contests_query = db.GqlQuery("SELECT * FROM Contest WHERE final_value < 0.0")
+    open_contests = open_contests_query.fetch(25)
+    closed_contests_query = db.GqlQuery("SELECT * FROM Contest WHERE final_value >= 0.0")
+    closed_contests = closed_contests_query.fetch(25)
     (logged_in_flag, login_url, login_url_linktext) = get_login_url_info(self)
     cur_user = get_my_current_user()
 
     template_values = {
-      'contests':           contests,
-      'cur_user':            cur_user,
+      'open_contests':      open_contests,
+      'closed_contests':    closed_contests,
+      'cur_user':           cur_user,
       'login_url':          login_url,
       'login_url_linktext': login_url_linktext,
       'logged_in_flag':     logged_in_flag,
@@ -118,7 +177,10 @@ class CreateContest(webapp.RequestHandler):
         logging.info('got user')
         cur_user = get_my_current_user()
         logging.info('got myuser')
-        stock = get_stock_from_symbol(self.request.get('symbol'))
+        stock = get_or_add_stock_from_symbol(self.request.get('symbol'))
+        if stock == None:
+          logging.error('bad stock symbol')
+          raise ValueError
         logging.info('adding contest to db')
         contest = Contest()
         contest.owner       = cur_user
@@ -151,8 +213,14 @@ class ViewContest(webapp.RequestHandler):
     logging.info("owner %s curuser %s owner_flag %s lif %s open_flag %s" %
                  ( contest.owner.user, users.get_current_user(), owner_flag, logged_in_flag, open_flag ))
     cur_user = get_my_current_user()
+    # no need to fetch on older contests...
+    if open_flag:
+      stock_price = get_stock_price(contest.stock.symbol)
+    else:
+      stock_price = None
     template_values = {
       'contest':            contest,
+      'stock_price':        stock_price,
       'predictions':        predictions,
       'owner_flag':         owner_flag,
       'open_flag':          open_flag,
