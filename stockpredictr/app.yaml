@@ -7,5 +7,9 @@ handlers:
 - url: /stylesheets
   static_dir: stylesheets
 
+- url: /admin/.*
+  script: stockpredictr.py
+  login: admin
+
 - url: /.*
   script: stockpredictr.py

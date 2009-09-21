@@ -75,9 +75,10 @@
               <div class="post">
                 <h2 class="title">Finish The Contest</h2>
                 <div class="entry">
-                  <p>You are the owner of the contest.  Enter this value when
-                    the contest should close.  A negative value keeps
-                    the contest open.</p>
+                  <p>You are the owner of the contest.  The system
+                    will automatically finalize a contest for you, but
+                    should something go awry, enter a value yourself.
+                    A negative value keeps the contest open.</p>
                   <form action="/finish/{{contest.key.id}}" method="post">
                     Final Value: 
                     <input type="text" name="final_value" value="{{contest.final_value}}">

@@ -42,7 +42,8 @@ def get_my_current_user():
     return None
   
   my_users = db.GqlQuery("SELECT * FROM MyUser WHERE user = :1",
-                         users.get_current_user()).fetch(10)
+                         users.get_current_user()).fetch(1)
+  # XXX should we have a cronjob to find multiple users?
   if len(my_users) == 0:
     logging.info('adding current user %s to db' % (users.get_current_user().nickname()))
     my_user = MyUser()
@@ -140,9 +141,9 @@ def get_stock_price_uncached(symbol):
 class MainPage(webapp.RequestHandler):
   def get(self):
     open_contests_query = db.GqlQuery("SELECT * FROM Contest WHERE final_value < 0.0")
-    open_contests = open_contests_query.fetch(25)
+    open_contests = open_contests_query.fetch(25) # XXX get next 25?
     closed_contests_query = db.GqlQuery("SELECT * FROM Contest WHERE final_value >= 0.0")
-    closed_contests = closed_contests_query.fetch(25)
+    closed_contests = closed_contests_query.fetch(25) # XXX get next 25?
     (logged_in_flag, login_url, login_url_linktext) = get_login_url_info(self)
     cur_user = get_my_current_user()
 
@@ -262,34 +263,34 @@ class EditPrediction(webapp.RequestHandler):
 
     self.redirect('/contest/'+contest_id)
 
+def finish_contest(contest, final_value):
+  logging.info("Closing contest %s %s" % ( contest.owner, contest.stock ))
+  contest.final_value = final_value
+  contest.put()
+  prediction_query = db.GqlQuery("SELECT * FROM Prediction WHERE contest = :1", contest)
+  min_pred = 100000.0
+  for prediction in prediction_query:
+    prediction.winner = False
+    prediction.put()
+    delta = abs(prediction.value - contest.final_value) 
+    if min_pred > delta:
+      min_pred = delta
+  if contest.final_value >= 0.0:
+    for prediction in prediction_query:
+      delta = abs(prediction.value - contest.final_value) 
+      if min_pred == delta:
+        prediction.winner = True
+        prediction.put()
+
 class FinishContest(webapp.RequestHandler):
   def post(self,contest_id):
     try:
       logging.info("FinishContest/%d" % int(contest_id))
       contest = Contest.get_by_id(long(contest_id))
-
-      contest.final_value = float(self.request.get('final_value'))
-      contest.put()
-
-      prediction_query = db.GqlQuery("SELECT * FROM Prediction WHERE contest = :1 ORDER BY value DESC",
-                                     contest)
-      predictions = prediction_query.fetch(1000) # xxx fetch all?
-      min_pred = 100000.0
-      for prediction in predictions:
-        prediction.winner = False
-        prediction.put()
-        delta = abs(prediction.value - contest.final_value) 
-        if min_pred > delta:
-          min_pred = delta
-      if contest.final_value >= 0.0:
-        for prediction in predictions:
-          delta = abs(prediction.value - contest.final_value) 
-          if min_pred == delta:
-            prediction.winner = True
-            prediction.put()
+      final_value = float(self.request.get('final_value'))
+      finish_contest(contest,final_value)
     except:
       logging.info("caught some error")
-
     self.redirect('/contest/'+contest_id)
 
 class ViewUser(webapp.RequestHandler):
@@ -328,8 +329,20 @@ class UpdateUser(webapp.RequestHandler):
        logging.info("caught some error")
      self.redirect('/user/'+user_id)
 
-
-
+class FinishAnyContests(webapp.RequestHandler):
+  def get(self):
+    logging.info('FinishAnyContests called')
+    today = datetime.date.today() # 4:30pm != next day...
+    logging.info("today=%s"%(today))
+    contests_query = db.GqlQuery("SELECT * FROM Contest WHERE close_date <= :1", today)
+    for contest in contests_query:
+      # only update contests that need a final value to be added
+      if contest.final_value < 0.0:
+        final_value = get_stock_price(contest.stock.symbol)
+        finish_contest(contest,final_value)
+    self.response.headers['Content-Type'] = 'text/plain'
+    self.response.out.write('Done')
+    
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 application = webapp.WSGIApplication(
   [ ( '/',                    MainPage),       # GET list of contests
@@ -340,6 +353,7 @@ application = webapp.WSGIApplication(
     (r'/finish/(.*)',         FinishContest),  # POST contest end
     (r'/user/(.*)',           ViewUser),       # GET user attributes
     (r'/update_user/(.*)',    UpdateUser),     # POST user attributes
+    ( '/admin/finish_any',    FinishAnyContests), # GET finish contests
     ],
   debug=True)
 

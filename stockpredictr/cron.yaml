@@ -1,0 +1,5 @@
+cron:
+- description: weekday contest finalization
+  url: /admin/finish_any
+  schedule: every mon,tue,wed,thu,fri 16:05
+  timezone: America/New_York
