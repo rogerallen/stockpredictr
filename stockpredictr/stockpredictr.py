@@ -1,7 +1,7 @@
 import cgi
 import os
 import logging
-import datetime
+import datetime as datetime_module
 
 from google.appengine.api import users
 from google.appengine.ext import webapp
@@ -33,6 +33,37 @@ class Prediction(db.Model):
   contest = db.ReferenceProperty(Contest)
   value   = db.FloatProperty()
   winner  = db.BooleanProperty()
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Eastern timezone for market open/close
+class Eastern_tzinfo(datetime_module.tzinfo):
+  """Implementation of the Eastern timezone."""
+  def utcoffset(self, dt):
+    return datetime_module.timedelta(hours=-5) + self.dst(dt)
+  
+  def _FirstSunday(self, dt):
+    """First Sunday on or after dt."""
+    return dt + datetime_module.timedelta(days=(6-dt.weekday()))
+
+  def dst(self, dt):
+    # 2 am on the second Sunday in March
+    dst_start = self._FirstSunday(datetime_module.datetime(dt.year, 3, 8, 2))
+    # 1 am on the first Sunday in November
+    dst_end = self._FirstSunday(datetime_module.datetime(dt.year, 11, 1, 1))
+
+    if dst_start <= dt.replace(tzinfo=None) < dst_end:
+      return datetime_module.timedelta(hours=1)
+    else:
+      return datetime_module.timedelta(hours=0)
+
+  def tzname(self, dt):
+    if self.dst(dt) == datetime_module.timedelta(hours=0):
+      return "EST"
+    else:
+      return "EDT"
+
+# XXX eastern_time_zone = utc_time.astimezone(Eastern_tzinfo())
+eastern_tz = Eastern_tzinfo()
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # data utils
@@ -104,12 +135,12 @@ def get_stock_price(symbol):
   if stock == None:
     logging.info("didn't find symbol %s"%(symbol))
     return "Unknown"
-  now = datetime.datetime.utcnow()
+  now = datetime_module.datetime.utcnow()
   dt = now - stock.recent_price_time
   #logging.info("now "+str(now))
   #logging.info("dt  "+str(dt))
   #logging.info("d   "+str(datetime.timedelta(0,STOCK_CACHE_SECONDS,0)))
-  if dt > datetime.timedelta(0,STOCK_CACHE_SECONDS,0):
+  if dt > datetime_module.timedelta(0,STOCK_CACHE_SECONDS,0):
     logging.info("going to get stock price...")
     stock_price = get_stock_price_uncached(symbol)
     stock.recent_price = stock_price
@@ -186,7 +217,7 @@ class CreateContest(webapp.RequestHandler):
         contest = Contest()
         contest.owner       = cur_user
         contest.stock       = stock
-        contest.close_date  = datetime.date(int(self.request.get('year')),
+        contest.close_date  = datetime_module.date(int(self.request.get('year')),
                                             int(self.request.get('month')),
                                             int(self.request.get('day')))
         contest.final_value = -1.0
@@ -209,6 +240,15 @@ class ViewContest(webapp.RequestHandler):
 
     (logged_in_flag, login_url, login_url_linktext) = get_login_url_info(self)
 
+    # see if we should allow the contest to be updated
+    now = datetime_module.datetime.now(eastern_tz)
+    contest_close_market_open = datetime_module.datetime(
+      contest.close_date.year, contest.close_date.month, contest.close_date.day,
+      9, 30, 0, 0,
+      eastern_tz)
+    can_update_flag = now < contest_close_market_open
+    logging.info("now %s ccmo %s update? %s" % (now, contest_close_market_open, can_update_flag))
+      
     owner_flag = users.get_current_user() == contest.owner.user
     open_flag = contest.final_value < 0.0
     logging.info("owner %s curuser %s owner_flag %s lif %s open_flag %s" %
@@ -223,9 +263,10 @@ class ViewContest(webapp.RequestHandler):
       'contest':            contest,
       'stock_price':        stock_price,
       'predictions':        predictions,
+      'can_update_flag':    can_update_flag,
       'owner_flag':         owner_flag,
       'open_flag':          open_flag,
-      'cur_user':            cur_user,
+      'cur_user':           cur_user,
       'login_url':          login_url,
       'login_url_linktext': login_url_linktext,
       'logged_in_flag':     logged_in_flag,
@@ -332,7 +373,7 @@ class UpdateUser(webapp.RequestHandler):
 class FinishAnyContests(webapp.RequestHandler):
   def get(self):
     logging.info('FinishAnyContests called')
-    today = datetime.date.today() # 4:30pm != next day...
+    today = datetime_module.date.today() # 4:30pm != next day...
     logging.info("today=%s"%(today))
     contests_query = db.GqlQuery("SELECT * FROM Contest WHERE close_date <= :1", today)
     for contest in contests_query:

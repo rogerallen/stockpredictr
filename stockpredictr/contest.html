@@ -60,12 +60,18 @@
               <div class="post">
                 <h2 class="title">Enter Your Prediction</h2>
                 <div class="entry">
+                  {% if can_update_flag %}
                   <p>Enter your prediction here.  You may update it until the
                     contest is closed</p>
                   <form action="/new_prediction/{{contest.key.id}}" method="post">
                     Prediction: 
                     <input type="text" name="prediction">
                   </form>
+                  {% else %}
+                  <p>No more prediction updates are allowed.  The contest
+                  ends today and the market is open at 9:30AM Eastern
+                  time. Come back at 4PM Eastern time to see who won!</p>
+                  {% endif %}
                 </div> <!-- end #entry -->
               </div> <!-- end #post -->
 
