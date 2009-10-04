@@ -1,34 +1,55 @@
+"""
+stockpredictr.py - code for the stockpredictr google web app.
+"""
 import cgi
 import os
 import logging
 import datetime as datetime_module
-
+from django.utils import simplejson
 from google.appengine.api import users
 from google.appengine.ext import webapp
 from google.appengine.ext import db
 from google.appengine.ext.webapp import template
 from google.appengine.ext.webapp.util import run_wsgi_app
 from google.appengine.api import urlfetch
-from django.utils import simplejson
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # our databases
 class Stock(db.Model):
+  """
+  Table of Stocks used in contests. 
+  symbol - an all-caps version of the stock symbol
+  recent_price[_time] - cache the latest price.  
+  """
   symbol = db.StringProperty()
   recent_price = db.FloatProperty()
   recent_price_time = db.DateTimeProperty(auto_now=True)
   
 class MyUser(db.Model):
+  """
+  Table of Users that play in the contests.
+  nickname - how they want to call themselves
+  user - how google tracks them
+  """
   nickname = db.StringProperty() # custom nickname for this site
+  wins = db.IntegerProperty()
+  losses = db.IntegerProperty()
+  win_pct = db.FloatProperty()
   user = db.UserProperty()
 
 class Contest(db.Model):
+  """
+  XXX
+  """
   owner       = db.ReferenceProperty(MyUser)
   stock       = db.ReferenceProperty(Stock)
   close_date  = db.DateProperty()
   final_value = db.FloatProperty()
 
 class Prediction(db.Model):
+  """
+  Table of Predictions - one per user per contest.  updates allowed.
+  """
   user    = db.ReferenceProperty(MyUser)
   contest = db.ReferenceProperty(Contest)
   value   = db.FloatProperty()
@@ -37,7 +58,7 @@ class Prediction(db.Model):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Eastern timezone for market open/close
 class Eastern_tzinfo(datetime_module.tzinfo):
-  """Implementation of the Eastern timezone."""
+  """Implementation of the Eastern timezone where the NYSE is."""
   def utcoffset(self, dt):
     return datetime_module.timedelta(hours=-5) + self.dst(dt)
   
@@ -61,7 +82,7 @@ class Eastern_tzinfo(datetime_module.tzinfo):
       return "EST"
     else:
       return "EDT"
-
+# this was from the example, but it doesn't work
 # XXX eastern_time_zone = utc_time.astimezone(Eastern_tzinfo())
 eastern_tz = Eastern_tzinfo()
 
@@ -171,6 +192,8 @@ def get_stock_price_uncached(symbol):
 # our webpages
 class MainPage(webapp.RequestHandler):
   def get(self):
+    users_query = db.GqlQuery("SELECT * FROM MyUser ORDER BY win_pct")
+    users = users_query.fetch(25)
     open_contests_query = db.GqlQuery("SELECT * FROM Contest WHERE final_value < 0.0")
     open_contests = open_contests_query.fetch(25) # XXX get next 25?
     closed_contests_query = db.GqlQuery("SELECT * FROM Contest WHERE final_value >= 0.0")
@@ -179,6 +202,7 @@ class MainPage(webapp.RequestHandler):
     cur_user = get_my_current_user()
 
     template_values = {
+      'users':              users,
       'open_contests':      open_contests,
       'closed_contests':    closed_contests,
       'cur_user':           cur_user,
@@ -381,6 +405,18 @@ class FinishAnyContests(webapp.RequestHandler):
       if contest.final_value < 0.0:
         final_value = get_stock_price(contest.stock.symbol)
         finish_contest(contest,final_value)
+    # now get each person's win/loss record straight
+    for user in db.GqlQuery("SELECT * FROM MyUser"):
+      user.wins = 0
+      user.losses = 0
+      for prediction in db.GqlQuery("SELECT * FROM Prediction WHERE user = :1",user):
+        if prediction.contest.final_value >= 0.0:
+          if prediction.winner:
+            user.wins += 1
+          else:
+            user.losses += 1
+      user.win_pct = float(user.wins)/float(user.wins + user.losses)
+      user.put()
     self.response.headers['Content-Type'] = 'text/plain'
     self.response.out.write('Done')
     
