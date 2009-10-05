@@ -29,13 +29,18 @@
         <div id="page-bgbtm">
           <div id="content">
             <div class="post">
-              <h2 class="title">Predictions</h2>
+              <h2 class="title">Closed Predictions</h2>
               <div class="entry">
                 <ul>
-                  {% for prediction in predictions %}
+                  <li>{{ cur_user.wins }} for 
+                    {{ cur_user.losses }}
+                    ({{ cur_user.win_pct }}%)</li>
+                  {% for prediction in closed_predictions %}
                     <li> 
                     {% if prediction.winner %}
-                      <b> WINNER! - 
+                      <b> WIN - 
+                    {% else %}
+                      LOSS -
                     {% endif %}
                     <a href="/contest/{{prediction.contest.key.id}}">
                       {{ prediction.value }} -
@@ -45,6 +50,22 @@
                     {% if prediction.winner %}
                       </b>
                     {% endif %}
+                  {% endfor %}
+                </ul>
+              </div> <!-- end #entry -->
+            </div> <!-- end #post -->
+
+            <div class="post">
+              <h2 class="title">Open Predictions</h2>
+              <div class="entry">
+                <ul>
+                  {% for prediction in open_predictions %}
+                    <li> 
+                    <a href="/contest/{{prediction.contest.key.id}}">
+                      {{ prediction.value }} -
+                      {{ prediction.contest.stock.symbol }} -
+                      {{ prediction.contest.close_date }}
+                    </a>
                   {% endfor %}
                 </ul>
               </div> <!-- end #entry -->

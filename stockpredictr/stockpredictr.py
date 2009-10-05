@@ -21,8 +21,8 @@ class Stock(db.Model):
   symbol - an all-caps version of the stock symbol
   recent_price[_time] - cache the latest price.  
   """
-  symbol = db.StringProperty()
-  recent_price = db.FloatProperty()
+  symbol            = db.StringProperty()
+  recent_price      = db.FloatProperty()
   recent_price_time = db.DateTimeProperty(auto_now=True)
   
 class MyUser(db.Model):
@@ -32,10 +32,10 @@ class MyUser(db.Model):
   user - how google tracks them
   """
   nickname = db.StringProperty() # custom nickname for this site
-  wins = db.IntegerProperty()
-  losses = db.IntegerProperty()
-  win_pct = db.FloatProperty()
-  user = db.UserProperty()
+  wins     = db.IntegerProperty()
+  losses   = db.IntegerProperty()
+  win_pct  = db.FloatProperty()
+  user     = db.UserProperty()
 
 class Contest(db.Model):
   """
@@ -363,15 +363,17 @@ class ViewUser(webapp.RequestHandler):
     logging.info("ViewUser/%d" % int(user_id))
     the_user = MyUser.get_by_id(long(user_id))
     authorized_to_edit = the_user.user == users.get_current_user()
-    prediction_query = db.GqlQuery("SELECT * FROM Prediction WHERE user = :1",
-                                   #ORDER BY contest.close_date DESC",
-                                   the_user)
-    predictions = prediction_query.fetch(100) # xxx multiple pages?
+    # NOTE the use of reference properties instead of a query
+    # AND they are sorted by contest close date!  (yay)
+    predictions = sorted(the_user.prediction_set,key=lambda obj: obj.contest.close_date)
+    closed_predictions = filter(lambda obj: obj.contest.final_value >= 0.0, predictions)
+    open_predictions = filter(lambda obj: obj.contest.final_value < 0.0, predictions)
     (logged_in_flag, login_url, login_url_linktext) = get_login_url_info(self)
     cur_user = get_my_current_user()
     template_values = {
       'the_user':           the_user,
-      'predictions':        predictions,
+      'closed_predictions': closed_predictions,
+      'open_predictions':   open_predictions,
       'authorized_to_edit': authorized_to_edit,
       'cur_user':           cur_user,
       'login_url':          login_url,
@@ -415,7 +417,9 @@ class FinishAnyContests(webapp.RequestHandler):
             user.wins += 1
           else:
             user.losses += 1
-      user.win_pct = float(user.wins)/float(user.wins + user.losses)
+      # round to nearest 100th
+      user.win_pct = 100*float(user.wins)/float(user.wins + user.losses)
+      user.win_pct = int(user.win_pct*100)/100.0
       user.put()
     self.response.headers['Content-Type'] = 'text/plain'
     self.response.out.write('Done')
