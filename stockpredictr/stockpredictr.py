@@ -192,7 +192,7 @@ def get_stock_price_uncached(symbol):
 # our webpages
 class MainPage(webapp.RequestHandler):
   def get(self):
-    users_query = db.GqlQuery("SELECT * FROM MyUser ORDER BY win_pct")
+    users_query = db.GqlQuery("SELECT * FROM MyUser ORDER BY win_pct DESC")
     users = users_query.fetch(25)
     open_contests_query = db.GqlQuery("SELECT * FROM Contest WHERE final_value < 0.0")
     open_contests = open_contests_query.fetch(25) # XXX get next 25?
