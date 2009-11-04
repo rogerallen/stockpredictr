@@ -26,19 +26,6 @@
       <div id="page-bgtop">
         <div id="page-bgbtm">
           <div id="content">
-            <div class="post">
-              <h2 class="title">Top Predictrs</h2>
-              <div class="entry">
-                <ul>
-                  {% for user in users %}
-                    <li> <a href="user/{{user.key.id}}">
-                        {{ user.nickname }} - 
-                        {{ user.win_pct }}%</a>
-                    </li>
-                  {% endfor %}
-                </ul>
-              </div> <!-- end #entry -->
-            </div> <!-- end #post -->
 
             <div class="post">
               <h2 class="title">Current Contests</h2>
@@ -49,6 +36,20 @@
                         {{ contest.stock.symbol }} - 
                         {{ contest.close_date }}</a> -
                         <a href="user/{{contest.owner.key.id}}">{{ contest.owner.nickname }}</a>
+                    </li>
+                  {% endfor %}
+                </ul>
+              </div> <!-- end #entry -->
+            </div> <!-- end #post -->
+
+            <div class="post">
+              <h2 class="title">Top Predictrs</h2>
+              <div class="entry">
+                <ul>
+                  {% for user in users %}
+                    <li> <a href="user/{{user.key.id}}">
+                        {{ user.nickname }} - 
+                        {{ user.win_pct }}%</a>
                     </li>
                   {% endfor %}
                 </ul>
