@@ -101,6 +101,9 @@ def get_my_current_user():
     my_user = MyUser()
     my_user.user     = users.get_current_user()
     my_user.nickname = users.get_current_user().nickname()
+    my_user.wins     = 0
+    my_user.losses   = 0
+    my_user.win_pct  = 0.0
     my_user.put()
   else:
     assert(len(my_users) == 1)
@@ -417,8 +420,11 @@ class FinishAnyContests(webapp.RequestHandler):
             user.wins += 1
           else:
             user.losses += 1
+      try:
+        user.win_pct = 100*float(user.wins)/float(user.wins + user.losses)
+      except ZeroDivisionError:
+        user.win_pct = 0.0
       # round to nearest 100th
-      user.win_pct = 100*float(user.wins)/float(user.wins + user.losses)
       user.win_pct = int(user.win_pct*100)/100.0
       user.put()
     self.response.headers['Content-Type'] = 'text/plain'
