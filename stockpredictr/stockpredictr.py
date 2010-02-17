@@ -193,9 +193,10 @@ def get_stock_price_uncached(symbol):
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # our webpages
+# index.html
 class MainPage(webapp.RequestHandler):
   def get(self):
-    users_query = db.GqlQuery("SELECT * FROM MyUser ORDER BY win_pct DESC")
+    users_query = db.GqlQuery("SELECT * FROM MyUser WHERE win_pct > 0.0 ORDER BY win_pct DESC")
     users = users_query.fetch(25)
     open_contests_query = db.GqlQuery("SELECT * FROM Contest WHERE final_value < 0.0")
     open_contests = open_contests_query.fetch(25) # XXX get next 25?
@@ -217,6 +218,7 @@ class MainPage(webapp.RequestHandler):
     path = os.path.join(os.path.dirname(__file__), 'index.html')
     self.response.out.write(template.render(path, template_values))
 
+# about.html
 class About(webapp.RequestHandler):
   def get(self):
     (logged_in_flag, login_url, login_url_linktext) = get_login_url_info(self)
@@ -229,6 +231,7 @@ class About(webapp.RequestHandler):
     path = os.path.join(os.path.dirname(__file__), 'about.html')
     self.response.out.write(template.render(path, template_values))
 
+# /contest/
 class CreateContest(webapp.RequestHandler):
   def post(self):
     try:
@@ -255,7 +258,7 @@ class CreateContest(webapp.RequestHandler):
       logging.info("caught some error")
       self.redirect('/')
   
-
+# contest.html
 class ViewContest(webapp.RequestHandler):
   def get(self,contest_id):
     logging.info("ViewContest/%d" % int(contest_id))
