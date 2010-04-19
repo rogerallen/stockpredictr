@@ -1,5 +1,5 @@
 application: stockpredictr
-version: 3
+version: 4
 runtime: python
 api_version: 1
 
@@ -7,9 +7,9 @@ handlers:
 - url: /stylesheets
   static_dir: stylesheets
 
-#- url: /favicon.ico
-#  static_files: /favicon.ico
-#  upload: /favicon.ico
+- url: /favicon.ico
+  static_files: favicon.ico
+  upload: favicon.ico
 
 - url: /admin/.*
   script: stockpredictr.py

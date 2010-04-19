@@ -30,69 +30,87 @@
       <div id="page-bgtop">
         <div id="page-bgbtm">
           <div id="content">
-            <div class="post">
-              <h2 class="title">Contest Entries</h2>
-              <div class="entry">
-                <ul>
-                  {% for prediction in predictions %}
-                    <li> 
-                    {% if prediction.winner %}
-                      <b> WINNER! - 
-                    {% endif %}
-                    {{ prediction.value }} -
-                    <a href="/user/{{ prediction.user.key.id }}">
-                      {{ prediction.user.nickname }}
-                    </a>
-                    {% if prediction.winner %}
-                      </b>
-                    {% endif %}
-                  {% endfor %}
-                  {% if open_flag %}
-                      <li> <b>Current Price = {{ stock_price }}</b>
-                  {% else %}
-                      <li> <b>Final Value = {{ contest.final_value }}</b>
-                  {% endif %}
-                </ul>
-              </div> <!-- end #entry -->
-            </div> <!-- end #post -->
-
-            {% if logged_in_flag and open_flag %}
+            {% if authorized %}
               <div class="post">
-                <h2 class="title">Enter Your Prediction</h2>
+                <h2 class="title">Contest Entries</h2>
                 <div class="entry">
-                  {% if can_update_flag %}
-                  <p>Enter your prediction here.  You may update it until the
-                    contest is closed</p>
-                  <form action="/new_prediction/{{contest.key.id}}" method="post">
-                    Prediction: 
-                    <input type="text" name="prediction">
-                  </form>
-                  {% else %}
-                  <p>No more prediction updates are allowed.  The contest
-                  ends today and the market is open at 9:30AM Eastern
-                  time. Come back at 4PM Eastern time to see who won!</p>
-                  {% endif %}
+                  <ul>
+                    {% for prediction in predictions %}
+                      <li> 
+                      {% if prediction.winner %}
+                        <b> WINNER! - 
+                      {% endif %}
+                      {{ prediction.value }} -
+                      <a href="/user/{{ prediction.user.key.id }}">
+                        {{ prediction.user.nickname }}
+                      </a>
+                      {% if prediction.winner %}
+                        </b>
+                      {% endif %}
+                    {% endfor %}
+                    {% if open_flag %}
+                        <li> <b>Current Price = {{ stock_price }}</b>
+                    {% else %}
+                        <li> <b>Final Value = {{ contest.final_value }}</b>
+                    {% endif %}
+                  </ul>
                 </div> <!-- end #entry -->
               </div> <!-- end #post -->
 
-            {% endif %}
+              {% if logged_in_flag and open_flag %}
+                <div class="post">
+                  <h2 class="title">Enter Your Prediction</h2>
+                  <div class="entry">
+                    {% if can_update_flag %}
+                    <p>Enter your prediction here.  You may update it until the
+                      contest is closed</p>
+                    <form action="/new_prediction/{{contest.key.id}}" method="post">
+                      Prediction: 
+                      <input type="text" name="prediction">
+                    </form>
+                    {% else %}
+                    <p>No more prediction updates are allowed.  The contest
+                    ends today and the market is open at 9:30AM Eastern
+                    time. Come back at 4PM Eastern time to see who won!</p>
+                    {% endif %}
+                  </div> <!-- end #entry -->
+                </div> <!-- end #post -->
 
-            {% if owner_flag %}
+              {% endif %}
+
+              {% if owner_flag %}
+                <div class="post">
+                  <h2 class="title">Finish The Contest</h2>
+                  <div class="entry">
+                    <p>You are the owner of the contest.  The system
+                      will automatically finalize a contest for you, but
+                      should something go awry, enter a value yourself.
+                      A negative value keeps the contest open.</p>
+                    <form action="/finish/{{contest.key.id}}" method="post">
+                      Final Value: 
+                      <input type="text" name="final_value" value="{{contest.final_value}}">
+                    </form>
+                  </div> <!-- end #entry -->
+                </div> <!-- end #post -->
+              {% endif %}
+            {% else %} <!-- not authorized -->
               <div class="post">
-                <h2 class="title">Finish The Contest</h2>
-                <div class="entry">
-                  <p>You are the owner of the contest.  The system
-                    will automatically finalize a contest for you, but
-                    should something go awry, enter a value yourself.
-                    A negative value keeps the contest open.</p>
-                  <form action="/finish/{{contest.key.id}}" method="post">
-                    Final Value: 
-                    <input type="text" name="final_value" value="{{contest.final_value}}">
-                  </form>
-                </div> <!-- end #entry -->
+                <h2 class="title">Unauthorized</h2>
+                  <div class="entry">
+                    <p>You are unauthorized to view this
+                      contest.
+                    {% if cur_user %}
+                      Enter the passphrase to view.</p>
+                      <form action="/authorize_contest/{{contest.key.id}}" method="post">
+                        Passphrase: 
+                        <input type="text" name="passphrase">
+                      </form>
+                    {% else %}
+                      <i>Login to view.</i></p>
+                    {% endif %}
+                  </div> <!-- end #entry -->
               </div> <!-- end #post -->
             {% endif %}
-
           </div> <!-- end #content -->
 
 	  <div id="sidebar">

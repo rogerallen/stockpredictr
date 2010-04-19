@@ -5,6 +5,8 @@ import cgi
 import os
 import logging
 import datetime as datetime_module
+import random
+import hashlib
 from django.utils import simplejson
 from google.appengine.api import users
 from google.appengine.ext import webapp
@@ -36,15 +38,22 @@ class MyUser(db.Model):
   losses   = db.IntegerProperty()
   win_pct  = db.FloatProperty()
   user     = db.UserProperty()
+  authorized_contest_list = db.ListProperty(db.Key)
 
 class Contest(db.Model):
   """
-  XXX
+  The Contests that we play
+  private is a flag for requiring a passphrase
+  salt is a random number that we use for defeating rainbow attacks (unlikely!)
+  hashphrase is the hashed result of passphrase + salt
   """
   owner       = db.ReferenceProperty(MyUser)
   stock       = db.ReferenceProperty(Stock)
   close_date  = db.DateProperty()
   final_value = db.FloatProperty()
+  private     = db.BooleanProperty()
+  salt        = db.StringProperty()
+  hashphrase  = db.StringProperty()
 
 class Prediction(db.Model):
   """
@@ -190,6 +199,10 @@ def get_stock_price_uncached(symbol):
   logging.info("stock price = %s" % (stock_price))
   return stock_price
 
+def myhash(salted_password):
+  x = hashlib.sha256()
+  x.update(salted_password)
+  return x.hexdigest()
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # our webpages
@@ -198,9 +211,16 @@ class MainPage(webapp.RequestHandler):
   def get(self):
     users_query = db.GqlQuery("SELECT * FROM MyUser WHERE win_pct > 0.0 ORDER BY win_pct DESC")
     users = users_query.fetch(25)
-    open_contests_query = db.GqlQuery("SELECT * FROM Contest WHERE final_value < 0.0")
+    today = datetime_module.date.today()
+    open_contests_query = db.GqlQuery(
+      "SELECT * FROM Contest " +
+      "WHERE close_date >= :1 " +
+      "ORDER BY close_date ASC", today)
     open_contests = open_contests_query.fetch(25) # XXX get next 25?
-    closed_contests_query = db.GqlQuery("SELECT * FROM Contest WHERE final_value >= 0.0")
+    closed_contests_query = db.GqlQuery(
+      "SELECT * FROM Contest " +
+      "WHERE close_date < :1 " +
+      "ORDER BY close_date DESC", today)
     closed_contests = closed_contests_query.fetch(25) # XXX get next 25?
     (logged_in_flag, login_url, login_url_linktext) = get_login_url_info(self)
     cur_user = get_my_current_user()
@@ -231,31 +251,46 @@ class About(webapp.RequestHandler):
     path = os.path.join(os.path.dirname(__file__), 'about.html')
     self.response.out.write(template.render(path, template_values))
 
+# shared make_private routine
+def make_private(contest, private, passphrase):
+  contest.private = private
+  if contest.private:
+    logging.info('this is a private contest')
+    contest.salt       = str(int(random.randint(1000,10000)))
+    contest.hashphrase = myhash(passphrase+contest.salt)
+  else:
+    logging.info('this is a public contest')
+    contest.salt       = None
+    contest.hashphrase = None
+
 # /contest/
 class CreateContest(webapp.RequestHandler):
   def post(self):
     try:
       if users.get_current_user():
-        logging.info('got user')
+        logging.info('got cur_user')
         cur_user = get_my_current_user()
-        logging.info('got myuser')
         stock = get_or_add_stock_from_symbol(self.request.get('symbol'))
         if stock == None:
           logging.error('bad stock symbol')
           raise ValueError
         logging.info('adding contest to db')
         contest = Contest()
-        contest.owner       = cur_user
-        contest.stock       = stock
-        contest.close_date  = datetime_module.date(int(self.request.get('year')),
-                                            int(self.request.get('month')),
-                                            int(self.request.get('day')))
-        contest.final_value = -1.0
+        contest.owner        = cur_user
+        contest.stock        = stock
+        contest.close_date   = datetime_module.date(
+          int(self.request.get('year')),
+          int(self.request.get('month')),
+          int(self.request.get('day')))
+        contest.final_value  = -1.0
+        make_private(contest,
+                     self.request.get('private') == '1',
+                     self.request.get('passphrase'))
         contest.put()
         logging.info("contest id"+str(contest.key().id()))
         self.redirect('/contest/'+str(contest.key().id()))
     except:
-      logging.info("caught some error")
+      logging.exception("CreateContest Error")
       self.redirect('/')
   
 # contest.html
@@ -263,33 +298,42 @@ class ViewContest(webapp.RequestHandler):
   def get(self,contest_id):
     logging.info("ViewContest/%d" % int(contest_id))
     contest = Contest.get_by_id(long(contest_id))
-    
-    prediction_query = db.GqlQuery("SELECT * FROM Prediction WHERE contest = :1 ORDER BY value DESC",
-                                   contest)
-    predictions = prediction_query.fetch(100) # xxx multiple pages?
+
+    # check for privacy and authorization
+    cur_user = get_my_current_user()
+    owner_flag = users.get_current_user() == contest.owner.user
+    in_authorized_list = False
+    if cur_user:
+      in_authorized_list = contest.key() in cur_user.authorized_contest_list
+    stock_price = None
+    authorized_to_view = True
+    if contest.private:
+      authorized_to_view = users.is_current_user_admin() or owner_flag or in_authorized_list
+      logging.info("private: allowed=%s" % (authorized_to_view))
 
     (logged_in_flag, login_url, login_url_linktext) = get_login_url_info(self)
 
-    # see if we should allow the contest to be updated
-    now = datetime_module.datetime.now(eastern_tz)
-    contest_close_market_open = datetime_module.datetime(
-      contest.close_date.year, contest.close_date.month, contest.close_date.day,
-      9, 30, 0, 0,
-      eastern_tz)
-    can_update_flag = now < contest_close_market_open
-    logging.info("now %s ccmo %s update? %s" % (now, contest_close_market_open, can_update_flag))
-      
-    owner_flag = users.get_current_user() == contest.owner.user
-    open_flag = contest.final_value < 0.0
-    logging.info("owner %s curuser %s owner_flag %s lif %s open_flag %s" %
-                 ( contest.owner.user, users.get_current_user(), owner_flag, logged_in_flag, open_flag ))
-    cur_user = get_my_current_user()
-    # no need to fetch on older contests...
-    if open_flag:
-      stock_price = get_stock_price(contest.stock.symbol)
+    if authorized_to_view:
+      prediction_query = db.GqlQuery("SELECT * FROM Prediction WHERE contest = :1 ORDER BY value DESC",
+                                     contest)
+      predictions = prediction_query.fetch(100) # xxx multiple pages?
+      # see if we should allow the contest to be updated
+      now = datetime_module.datetime.now(eastern_tz)
+      contest_close_market_open = datetime_module.datetime(
+        contest.close_date.year, contest.close_date.month, contest.close_date.day,
+        9, 30, 0, 0,
+        eastern_tz)
+      can_update_flag = now < contest_close_market_open
+      open_flag = contest.final_value < 0.0
+      if open_flag:
+        stock_price = get_stock_price(contest.stock.symbol)
     else:
-      stock_price = None
+      predictions     = []
+      can_update_flag = False
+      open_flag       = False
+      
     template_values = {
+      'authorized':         authorized_to_view,
       'contest':            contest,
       'stock_price':        stock_price,
       'predictions':        predictions,
@@ -330,7 +374,7 @@ class EditPrediction(webapp.RequestHandler):
         prediction.winner     = False
         prediction.put()
     except:
-      logging.info("caught some error")
+      logging.exception("EditPrediction Error")
 
     self.redirect('/contest/'+contest_id)
 
@@ -361,7 +405,7 @@ class FinishContest(webapp.RequestHandler):
       final_value = float(self.request.get('final_value'))
       finish_contest(contest,final_value)
     except:
-      logging.info("caught some error")
+      logging.exception("FinishContest Error")
     self.redirect('/contest/'+contest_id)
 
 class ViewUser(webapp.RequestHandler):
@@ -398,8 +442,8 @@ class UpdateUser(webapp.RequestHandler):
          my_user.nickname = self.request.get('nickname')
          my_user.put()
          logging.info('updated nickname to %s' % (new_nickname))
-     except:
-       logging.info("caught some error")
+     except: 
+      logging.exception("UpdateUser Error")
      self.redirect('/user/'+user_id)
 
 class FinishAnyContests(webapp.RequestHandler):
@@ -432,12 +476,32 @@ class FinishAnyContests(webapp.RequestHandler):
       user.put()
     self.response.headers['Content-Type'] = 'text/plain'
     self.response.out.write('Done')
-    
+
+class AuthorizeContest(webapp.RequestHandler):
+  def post(self,contest_id):
+    logging.info('AuthorizeContest')
+    try:
+      if users.get_current_user():
+        logging.info('got cur_user')
+        cur_user = get_my_current_user()
+        contest = Contest.get_by_id(long(contest_id))
+        passphrase = self.request.get('passphrase')
+        passphrase_match = contest.hashphrase == myhash(passphrase+contest.salt)
+        logging.info('passphrase=%s match=%s'%(passphrase,passphrase_match))
+        if passphrase_match:
+          cur_user.authorized_contest_list.append(contest.key())
+          cur_user.put()
+    except:
+      logging.exception("AuthorizeContest Error")
+    self.redirect('/contest/'+contest_id)
+
+        
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 application = webapp.WSGIApplication(
   [ ( '/',                    MainPage),       # GET list of contests
     ( '/about',               About),          # GET what is this site about?
     ( '/new_contest',         CreateContest),  # POST a new contest
+    (r'/authorize_contest/(.*)', AuthorizeContest), # POST authorize user for contest
     (r'/contest/(.*)',        ViewContest),    # GET list predictions
     (r'/new_prediction/(.*)', EditPrediction), # POST prediction
     (r'/finish/(.*)',         FinishContest),  # POST contest end
