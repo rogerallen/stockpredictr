@@ -72,13 +72,19 @@
                     <li> <a href="contest/{{contest.key.id}}">
                         {{ contest.stock.symbol }} - 
                         {{ contest.close_date }}</a> -
-                        <a href="user/{{contest.owner.key.id}}">{{ contest.owner.nickname }}</a>
+                        {% if contest.private %}
+                          [private]
+                        {% else %}
+                          <a href="user/{{contest.owner.key.id}}">
+                            {{ contest.owner.nickname }}</a>
+                        {% endif %}
                     </li>
                   {% endfor %}
                 </ul>
               </div> <!-- end #entry -->
             </div> <!-- end #post -->
 
+<!-- TODO - user privacy
             <div class="post">
               <h2 class="title">Top Predictrs</h2>
               <div class="entry">
@@ -90,9 +96,9 @@
                     </li>
                   {% endfor %}
                 </ul>
-              </div> <!-- end #entry -->
-            </div> <!-- end #post -->
-
+              </div>
+            </div>
+-->
             <div class="post">
               <h2 class="title">Past Contests</h2>
               <div class="entry">

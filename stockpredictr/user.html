@@ -35,41 +35,45 @@
                   <li>{{ the_user.wins }} for 
                     {{ the_user.losses }}
                     ({{ the_user.win_pct }}%)</li>
-                  {% for prediction in closed_predictions %}
-                    <li> 
-                    {% if prediction.winner %}
-                      <b> WIN - 
-                    {% else %}
-                      LOSS -
-                    {% endif %}
-                    <a href="/contest/{{prediction.contest.key.id}}">
-                      {{ prediction.value }} -
-                      {{ prediction.contest.stock.symbol }} -
-                      {{ prediction.contest.close_date }}
-                    </a>
-                    {% if prediction.winner %}
-                      </b>
-                    {% endif %}
-                  {% endfor %}
+                  {% if authorized_to_view %}
+                    {% for prediction in closed_predictions %}
+                      <li> 
+                      {% if prediction.winner %}
+                        <b> WIN - 
+                      {% else %}
+                        LOSS -
+                      {% endif %}
+                      <a href="/contest/{{prediction.contest.key.id}}">
+                        {{ prediction.value }} -
+                        {{ prediction.contest.stock.symbol }} -
+                        {{ prediction.contest.close_date }}
+                      </a>
+                      {% if prediction.winner %}
+                        </b>
+                      {% endif %}
+                    {% endfor %}
+                  {% endif %}
                 </ul>
               </div> <!-- end #entry -->
             </div> <!-- end #post -->
 
-            <div class="post">
-              <h2 class="title">Open Predictions</h2>
-              <div class="entry">
-                <ul>
-                  {% for prediction in open_predictions %}
-                    <li> 
-                    <a href="/contest/{{prediction.contest.key.id}}">
-                      {{ prediction.value }} -
-                      {{ prediction.contest.stock.symbol }} -
-                      {{ prediction.contest.close_date }}
-                    </a>
-                  {% endfor %}
-                </ul>
-              </div> <!-- end #entry -->
-            </div> <!-- end #post -->
+            {% if authorized_to_view %}
+              <div class="post">
+                <h2 class="title">Open Predictions</h2>
+                <div class="entry">
+                  <ul>
+                    {% for prediction in open_predictions %}
+                      <li> 
+                      <a href="/contest/{{prediction.contest.key.id}}">
+                        {{ prediction.value }} -
+                        {{ prediction.contest.stock.symbol }} -
+                        {{ prediction.contest.close_date }}
+                      </a>
+                    {% endfor %}
+                  </ul>
+                </div> <!-- end #entry -->
+              </div> <!-- end #post -->
+            {% endif %}
 
             {% if authorized_to_edit %}
               <div class="post">

@@ -64,6 +64,16 @@ class Prediction(db.Model):
   value   = db.FloatProperty()
   winner  = db.BooleanProperty()
 
+# a version of a prediction we use for the webpage presentation
+class FauxPrediction(object):
+  def __init__(self,user_nickname,user_id,value,winner,is_price):
+    self.user_nickname = user_nickname
+    self.user_id       = user_id
+    self.value         = value
+    self.winner        = winner
+    self.is_price      = is_price
+    self.leader        = False
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Eastern timezone for market open/close
 class Eastern_tzinfo(datetime_module.tzinfo):
@@ -209,8 +219,9 @@ def myhash(salted_password):
 # index.html
 class MainPage(webapp.RequestHandler):
   def get(self):
-    users_query = db.GqlQuery("SELECT * FROM MyUser WHERE win_pct > 0.0 ORDER BY win_pct DESC")
-    users = users_query.fetch(25)
+    # TODO - user privacy
+    #users_query = db.GqlQuery("SELECT * FROM MyUser WHERE win_pct > 0.0 ORDER BY win_pct DESC")
+    #users = users_query.fetch(25)
     today = datetime_module.date.today()
     open_contests_query = db.GqlQuery(
       "SELECT * FROM Contest " +
@@ -226,7 +237,8 @@ class MainPage(webapp.RequestHandler):
     cur_user = get_my_current_user()
 
     template_values = {
-      'users':              users,
+      # TODO - user privacy
+      #'users':              users,
       'open_contests':      open_contests,
       'closed_contests':    closed_contests,
       'cur_user':           cur_user,
@@ -314,9 +326,17 @@ class ViewContest(webapp.RequestHandler):
     (logged_in_flag, login_url, login_url_linktext) = get_login_url_info(self)
 
     if authorized_to_view:
-      prediction_query = db.GqlQuery("SELECT * FROM Prediction WHERE contest = :1 ORDER BY value DESC",
+      prediction_query = db.GqlQuery("SELECT * FROM Prediction WHERE contest = :1",
                                      contest)
       predictions = prediction_query.fetch(100) # xxx multiple pages?
+
+      # create a list that can get the stock price inserted
+      faux_predictions = []
+      for p in predictions:
+        faux_predictions.append(FauxPrediction(
+          p.user.nickname, p.user.key().id(), p.value, p.winner,False
+          ))
+        
       # see if we should allow the contest to be updated
       now = datetime_module.datetime.now(eastern_tz)
       contest_close_market_open = datetime_module.datetime(
@@ -326,9 +346,32 @@ class ViewContest(webapp.RequestHandler):
       can_update_flag = now < contest_close_market_open
       open_flag = contest.final_value < 0.0
       if open_flag:
+        stock_name = "Current Price"
         stock_price = get_stock_price(contest.stock.symbol)
+      else:
+        stock_name = "Final Price"
+        stock_price = contest.final_value
+
+      # find the current leader(s)
+      if open_flag:
+        min_pred = 100000.0
+        for prediction in faux_predictions:
+          delta = abs(prediction.value - stock_price) 
+          if min_pred > delta:
+            min_pred = delta
+        for prediction in faux_predictions:
+          delta = abs(prediction.value - stock_price)
+          if min_pred == delta:
+            prediction.leader = True
+
+      # add stock price to list of "faux" predictions
+      faux_predictions.append(FauxPrediction(
+        stock_name, 0, stock_price, False, True
+        ))
+      faux_predictions.sort(key=lambda p: p.value)
+
     else:
-      predictions     = []
+      faux_predictions     = []
       can_update_flag = False
       open_flag       = False
       
@@ -336,7 +379,7 @@ class ViewContest(webapp.RequestHandler):
       'authorized':         authorized_to_view,
       'contest':            contest,
       'stock_price':        stock_price,
-      'predictions':        predictions,
+      'predictions':        faux_predictions,
       'can_update_flag':    can_update_flag,
       'owner_flag':         owner_flag,
       'open_flag':          open_flag,
@@ -412,18 +455,25 @@ class ViewUser(webapp.RequestHandler):
   def get(self,user_id):
     logging.info("ViewUser/%d" % int(user_id))
     the_user = MyUser.get_by_id(long(user_id))
-    authorized_to_edit = the_user.user == users.get_current_user()
+    cur_user = get_my_current_user()
+    # TODO user privacy
+    try:
+      authorized_to_view = the_user.user == cur_user.user or users.is_current_user_admin()
+      authorized_to_edit = the_user.user == cur_user.user
+    except AttributeError:
+      authorized_to_view = False
+      authorized_to_edit = False
     # NOTE the use of reference properties instead of a query
     # AND they are sorted by contest close date!  (yay)
     predictions = sorted(the_user.prediction_set,key=lambda obj: obj.contest.close_date)
     closed_predictions = filter(lambda obj: obj.contest.final_value >= 0.0, predictions)
     open_predictions = filter(lambda obj: obj.contest.final_value < 0.0, predictions)
     (logged_in_flag, login_url, login_url_linktext) = get_login_url_info(self)
-    cur_user = get_my_current_user()
     template_values = {
       'the_user':           the_user,
       'closed_predictions': closed_predictions,
       'open_predictions':   open_predictions,
+      'authorized_to_view': authorized_to_view,
       'authorized_to_edit': authorized_to_edit,
       'cur_user':           cur_user,
       'login_url':          login_url,

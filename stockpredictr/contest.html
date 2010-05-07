@@ -40,19 +40,22 @@
                       {% if prediction.winner %}
                         <b> WINNER! - 
                       {% endif %}
-                      {{ prediction.value }} -
-                      <a href="/user/{{ prediction.user.key.id }}">
-                        {{ prediction.user.nickname }}
-                      </a>
+                      {% if prediction.is_price %}
+                        <b><i> {{ prediction.value }} - 
+                            {{ prediction.user_nickname }} </i></b>
+                      {% else %}
+                        {{ prediction.value }} - 
+                        <a href="/user/{{ prediction.user_id }}">
+                          {{ prediction.user_nickname }}
+                        </a>
+                      {% endif %}
                       {% if prediction.winner %}
                         </b>
                       {% endif %}
+                      {% if prediction.leader %}
+                        (Current Leader)
+                      {% endif %}
                     {% endfor %}
-                    {% if open_flag %}
-                        <li> <b>Current Price = {{ stock_price }}</b>
-                    {% else %}
-                        <li> <b>Final Value = {{ contest.final_value }}</b>
-                    {% endif %}
                   </ul>
                 </div> <!-- end #entry -->
               </div> <!-- end #post -->
