@@ -331,7 +331,7 @@ class HandleRoot(webapp.RequestHandler):
         contest.put()
         logging.info("contest id"+str(contest.key().id()))
         self.redirect('/contest/'+str(contest.key().id()))
-    except ValueError as verr:
+    except ValueError, verr: # python2.6!
       logging.exception("CreateContest ValueError")
       self.get(error_flag      = True,
                error_message   = verr,
