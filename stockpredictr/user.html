@@ -32,9 +32,9 @@
               <h2 class="title">Closed Predictions</h2>
               <div class="entry">
                 <ul>
-                  <li>{{ the_user.wins }} for 
-                    {{ the_user.losses }}
-                    ({{ the_user.win_pct }}%)</li>
+                  <li>{{ the_user.wins }} wins,
+                    {{ the_user.losses }} losses, 
+                    {{ the_user.win_pct }}%</li>
                   {% if authorized_to_view %}
                     {% for prediction in closed_predictions %}
                       <li> 

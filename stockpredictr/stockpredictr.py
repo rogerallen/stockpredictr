@@ -553,38 +553,53 @@ class FinishContest(webapp.RequestHandler):
 # POST user/id 
 class HandleUser(webapp.RequestHandler):
   def get(self,user_id):
-    logging.info("ViewUser/%d" % int(user_id))
-    the_user = MyUser.get_by_id(long(user_id))
-    cur_user = get_my_current_user()
-    # TODO user privacy
     try:
-      authorized_to_view = the_user.user == cur_user.user or users.is_current_user_admin()
-      authorized_to_edit = the_user.user == cur_user.user
-    except AttributeError:
-      authorized_to_view = False
-      authorized_to_edit = False
-    # NOTE the use of reference properties instead of a query
-    # AND they are sorted by contest close date!  (yay)
-    predictions = sorted(the_user.prediction_set,key=lambda obj: obj.contest.close_date)
-    closed_predictions = filter(lambda obj: obj.contest.final_value >= 0.0, predictions)
-    open_predictions = filter(lambda obj: obj.contest.final_value < 0.0, predictions)
-    (logged_in_flag, login_url, login_url_linktext) = get_login_url_info(self)
-    template_values = {
-      'the_user':           the_user,
-      'closed_predictions': closed_predictions,
-      'open_predictions':   open_predictions,
-      'authorized_to_view': authorized_to_view,
-      'authorized_to_edit': authorized_to_edit,
-      'cur_user':           cur_user,
-      'login_url':          login_url,
-      'login_url_linktext': login_url_linktext,
-      'logged_in_flag':     logged_in_flag,
-      'g_footer':           g_footer,
-      'g_welcome_warning':  g_welcome_warning,
-      }
-    path = os.path.join(os.path.dirname(__file__), 'user.html')
-    self.response.out.write(template.render(path, template_values))
-
+      logging.info("ViewUser/%d" % int(user_id))
+      the_user = MyUser.get_by_id(long(user_id))
+      cur_user = get_my_current_user()
+      (logged_in_flag, login_url, login_url_linktext) = get_login_url_info(self)
+      # TODO user privacy
+      try:
+        authorized_to_view = the_user.user == cur_user.user or users.is_current_user_admin()
+        authorized_to_edit = the_user.user == cur_user.user
+      except AttributeError:
+        authorized_to_view = False
+        authorized_to_edit = False
+      # NOTE the use of reference properties instead of a query
+      # AND they are sorted by contest close date!  (yay)
+      predictions = sorted(the_user.prediction_set,key=lambda obj: obj.contest.close_date)
+      closed_predictions = filter(lambda obj: obj.contest.final_value >= 0.0, predictions)
+      open_predictions = filter(lambda obj: obj.contest.final_value < 0.0, predictions)
+      template_values = {
+        'the_user':           the_user,
+        'closed_predictions': closed_predictions,
+        'open_predictions':   open_predictions,
+        'authorized_to_view': authorized_to_view,
+        'authorized_to_edit': authorized_to_edit,
+        'cur_user':           cur_user,
+        'login_url':          login_url,
+        'login_url_linktext': login_url_linktext,
+        'logged_in_flag':     logged_in_flag,
+        'g_footer':           g_footer,
+        'g_welcome_warning':  g_welcome_warning,
+        }
+      path = os.path.join(os.path.dirname(__file__), 'user.html')
+      self.response.out.write(template.render(path, template_values))
+    except:
+      logging.exception("HandleUser GET Error")
+      error_message = "The requested user does not exist."
+      template_values = {
+        'error_message':      error_message,
+        'cur_user':           cur_user,
+        'login_url':          login_url,
+        'login_url_linktext': login_url_linktext,
+        'logged_in_flag':     logged_in_flag,
+        'g_footer':           g_footer,
+        'g_welcome_warning':  g_welcome_warning,
+        }
+      path = os.path.join(os.path.dirname(__file__), 'error.html')
+      self.response.out.write(template.render(path, template_values))
+      
   def post(self,user_id):
      try:
        logging.info("UpdateUser/%d" % int(user_id))
@@ -660,10 +675,10 @@ class NotFoundPageHandler(webapp.RequestHandler):
 application = webapp.WSGIApplication(
   [ ( '/',                    MainPage),            # GET/POST list of contests
     ( '/about',               About),               # GET some info
-    (r'/authorize_contest/(.*)', AuthorizeContest), # POST authorize user
     (r'/contest/(.*)',        ViewContest),         # GET list predictions
     (r'/new_prediction/(.*)', EditPrediction),      # POST prediction
     (r'/finish/(.*)',         FinishContest),       # POST contest end
+    (r'/authorize_contest/(.*)', AuthorizeContest), # POST authorize user
     (r'/user/(.*)',           HandleUser),          # GET/POST user attributes
     ( '/admin/finish_any',    FinishAnyContests),   # GET finish contests
     ( '/.*',                  NotFoundPageHandler), # 404 Error
