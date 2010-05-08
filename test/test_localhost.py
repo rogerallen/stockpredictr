@@ -41,14 +41,14 @@ def get_comparison(url, gold_file_name, values=None, headers={}):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 class TestBasics(unittest.TestCase):
 
-    def testRootNoLogin(self):
+    def test000RootNoLogin(self):
         (the_page_lines, gold_page_lines) = get_comparison(
             SITE,'gold/basics000.html'
             )
         for i in range(len(max(the_page_lines,gold_page_lines))):
             self.assertEqual(the_page_lines[i],gold_page_lines[i])
 
-    def testRootWithLogin(self):
+    def test001RootWithLogin(self):
         (the_page_lines, gold_page_lines) = get_comparison(
             SITE,'gold/basics001.html',
             headers={'User-Agent': USERAGENT,
@@ -58,7 +58,7 @@ class TestBasics(unittest.TestCase):
         for i in range(len(max(the_page_lines,gold_page_lines))):
             self.assertEqual(the_page_lines[i],gold_page_lines[i])
 
-    def testRootAddBadStock(self):
+    def test002RootAddBadStock(self):
         (the_page_lines, gold_page_lines) = get_comparison(
             SITE,'gold/basics002.html',
             values={'symbol': 'nxxx'},
@@ -67,7 +67,7 @@ class TestBasics(unittest.TestCase):
         for i in range(len(max(the_page_lines,gold_page_lines))):
             self.assertEqual(the_page_lines[i],gold_page_lines[i])
         
-    def testRootAddMissingDate(self):
+    def test003RootAddMissingDate(self):
         # TODO - this error is not that great
         (the_page_lines, gold_page_lines) = get_comparison(
             SITE,'gold/basics003.html',
@@ -83,7 +83,7 @@ class TestBasics(unittest.TestCase):
         for i in range(len(max(the_page_lines,gold_page_lines))):
             self.assertEqual(the_page_lines[i],gold_page_lines[i])
         
-    def testRootAddDateInPast(self):
+    def test004RootAddDateInPast(self):
         (the_page_lines, gold_page_lines) = get_comparison(
             SITE,'gold/basics004.html',
             values={'symbol':     'test',
@@ -98,7 +98,7 @@ class TestBasics(unittest.TestCase):
         for i in range(len(max(the_page_lines,gold_page_lines))):
             self.assertEqual(the_page_lines[i],gold_page_lines[i])
         
-    def testRootAddPublic(self):
+    def test005RootAddPublic(self):
         (the_page_lines, gold_page_lines) = get_comparison(
             SITE,'gold/basics005.html',
             values={'symbol':     'test',
