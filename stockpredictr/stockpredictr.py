@@ -222,6 +222,9 @@ def get_stock_price(symbol):
   return stock_price
 
 def get_stock_price_uncached(symbol):
+  # add 'TEST' short-circuit stock that is always $12.0625/share
+  if symbol == 'TEST':
+    return 12.0625
   stock_price_url = "http://brivierestockquotes.appspot.com/?q=%s" % (symbol)
   stock_price_result = urlfetch.fetch(stock_price_url)
   if stock_price_result.status_code == 200:
@@ -253,7 +256,7 @@ def make_private(contest, private, passphrase):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # GET index.html
 # POST / for a new_contest
-class MainPage(webapp.RequestHandler):
+class HandleRoot(webapp.RequestHandler):
   def get(self,
           error_flag=False, error_message=None,
           form_symbol="",
@@ -302,9 +305,9 @@ class MainPage(webapp.RequestHandler):
     self.response.out.write(template.render(path, template_values))
 
   def post(self):
+    """Create a new contest..."""
     try:
       if users.get_current_user():
-        logging.info('got cur_user')
         cur_user = get_my_current_user()
         stock = get_or_add_stock_from_symbol(self.request.get('symbol'))
         if stock == None:
@@ -354,7 +357,7 @@ class MainPage(webapp.RequestHandler):
   
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # GET about.html
-class About(webapp.RequestHandler):
+class HandleAbout(webapp.RequestHandler):
   def get(self):
     (logged_in_flag, login_url, login_url_linktext) = get_login_url_info(self)
     cur_user = get_my_current_user()
@@ -367,150 +370,6 @@ class About(webapp.RequestHandler):
       }
     path = os.path.join(os.path.dirname(__file__), 'about.html')
     self.response.out.write(template.render(path, template_values))
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# POST authorize_contest/id
-class AuthorizeContest(webapp.RequestHandler):
-  """Authorize the current user to view this contest
-  """
-  def post(self,contest_id):
-    logging.info('AuthorizeContest')
-    try:
-      if users.get_current_user():
-        logging.info('got cur_user')
-        cur_user = get_my_current_user()
-        contest = Contest.get_by_id(long(contest_id))
-        passphrase = self.request.get('passphrase')
-        passphrase_match = contest.hashphrase == myhash(passphrase+contest.salt)
-        logging.info('passphrase=%s match=%s'%(passphrase,passphrase_match))
-        if passphrase_match:
-          cur_user.authorized_contest_list.append(contest.key())
-          cur_user.put()
-    except:
-      logging.exception("AuthorizeContest Error")
-    self.redirect('/contest/'+contest_id)
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# GET contest/id
-class ViewContest(webapp.RequestHandler):
-  def get(self,contest_id):
-    logging.info("ViewContest/%d" % int(contest_id))
-    contest = Contest.get_by_id(long(contest_id))
-
-    # check for privacy and authorization
-    cur_user = get_my_current_user()
-    owner_flag = users.get_current_user() == contest.owner.user
-    in_authorized_list = False
-    if cur_user:
-      in_authorized_list = contest.key() in cur_user.authorized_contest_list
-    stock_price = None
-    authorized_to_view = True
-    if contest.private:
-      authorized_to_view = users.is_current_user_admin() or owner_flag or in_authorized_list
-      logging.info("private: allowed=%s" % (authorized_to_view))
-
-    (logged_in_flag, login_url, login_url_linktext) = get_login_url_info(self)
-
-    if authorized_to_view:
-      prediction_query = db.GqlQuery("SELECT * FROM Prediction WHERE contest = :1",
-                                     contest)
-      predictions = prediction_query.fetch(100) # xxx multiple pages?
-
-      # create a list that can get the stock price inserted
-      faux_predictions = []
-      for p in predictions:
-        faux_predictions.append(FauxPrediction(
-          p.user.nickname, p.user.key().id(), p.value, p.winner,False
-          ))
-        
-      # see if we should allow the contest to be updated
-      now = datetime_module.datetime.now(eastern_tz)
-      contest_close_market_open = datetime_module.datetime(
-        contest.close_date.year, contest.close_date.month, contest.close_date.day,
-        9, 30, 0, 0,
-        eastern_tz)
-      can_update_flag = now < contest_close_market_open
-      open_flag = contest.final_value < 0.0
-      if open_flag:
-        stock_name = "Current Price"
-        stock_price = get_stock_price(contest.stock.symbol)
-      else:
-        stock_name = "Final Price"
-        stock_price = contest.final_value
-
-      # find the current leader(s)
-      if open_flag:
-        min_pred = 100000.0
-        for prediction in faux_predictions:
-          delta = abs(prediction.value - stock_price) 
-          if min_pred > delta:
-            min_pred = delta
-        for prediction in faux_predictions:
-          delta = abs(prediction.value - stock_price)
-          if min_pred == delta:
-            prediction.leader = True
-
-      # add stock price to list of "faux" predictions
-      faux_predictions.append(FauxPrediction(
-        stock_name, 0, stock_price, False, True
-        ))
-      faux_predictions.sort(key=lambda p: p.value)
-      faux_predictions.reverse()
-
-    else:
-      faux_predictions     = []
-      can_update_flag = False
-      open_flag       = False
-      
-    template_values = {
-      'authorized':         authorized_to_view,
-      'contest':            contest,
-      'stock_price':        stock_price,
-      'predictions':        faux_predictions,
-      'can_update_flag':    can_update_flag,
-      'owner_flag':         owner_flag,
-      'open_flag':          open_flag,
-      'cur_user':           cur_user,
-      'login_url':          login_url,
-      'login_url_linktext': login_url_linktext,
-      'logged_in_flag':     logged_in_flag,
-      'g_footer':           g_footer,
-      'g_welcome_warning':  g_welcome_warning,
-      }
-    
-    path = os.path.join(os.path.dirname(__file__), 'contest.html')
-    self.response.out.write(template.render(path, template_values))
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# POST new_prediction/id
-class EditPrediction(webapp.RequestHandler):
-  def post(self,contest_id):
-    try:
-      logging.info("EditPrediction/%d" % int(contest_id))
-      if users.get_current_user():
-        contest = Contest.get_by_id(long(contest_id))
-        cur_user = get_my_current_user()
-        value = float(self.request.get('prediction'))
-        prediction_query = db.GqlQuery("SELECT * FROM Prediction WHERE user = :1 AND contest = :2",
-                                       cur_user,
-                                       contest)
-        predictions = prediction_query.fetch(2)
-        if predictions:
-          assert(len(predictions) == 1)
-          logging.info('found previous prediction')
-          prediction = predictions[0]
-        else:
-          logging.info('adding prediction to db')
-          prediction = Prediction()
-        prediction.user       = cur_user
-        prediction.contest    = contest
-        prediction.value      = value
-        prediction.winner     = False
-        prediction.put()
-    except:
-      logging.exception("EditPrediction Error")
-
-    self.redirect('/contest/'+contest_id)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def finish_contest(contest, final_value):
@@ -536,17 +395,210 @@ def finish_contest(contest, final_value):
         prediction.put()
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# POST finish/id
-class FinishContest(webapp.RequestHandler):
-  def post(self,contest_id):
+# GET contest/id
+class HandleContest(webapp.RequestHandler):
+  def get(self,contest_id,
+          prediction_error_flag=False,
+          final_value_error_flag=False,
+          passphrase_error_flag=False,
+          error_message=None,
+          form_prediction="",
+          form_final_value="",
+          form_passphrase=""):
     try:
-      logging.info("FinishContest/%d" % int(contest_id))
+      cur_user = get_my_current_user()
+      (logged_in_flag, login_url, login_url_linktext) = get_login_url_info(self)
+      logging.info("HandleContest/%d (GET)" % int(contest_id))
+      contest = Contest.get_by_id(long(contest_id))
+      # check for privacy and authorization
+      owner_flag = users.get_current_user() == contest.owner.user
+      in_authorized_list = False
+      if cur_user:
+        in_authorized_list = contest.key() in cur_user.authorized_contest_list
+      stock_price = None
+      authorized_to_view = True
+      if contest.private:
+        authorized_to_view = users.is_current_user_admin() or owner_flag or in_authorized_list
+        logging.info("private: allowed=%s" % (authorized_to_view))
+
+      if authorized_to_view:
+        prediction_query = db.GqlQuery("SELECT * FROM Prediction WHERE contest = :1",
+                                       contest)
+        predictions = prediction_query.fetch(100) # xxx multiple pages?
+
+        # create a list that can get the stock price inserted
+        faux_predictions = []
+        for p in predictions:
+          faux_predictions.append(FauxPrediction(
+            p.user.nickname, p.user.key().id(), p.value, p.winner,False
+            ))
+          
+        # see if we should allow the contest to be updated
+        now = datetime_module.datetime.now(eastern_tz)
+        contest_close_market_open = datetime_module.datetime(
+          contest.close_date.year, contest.close_date.month, contest.close_date.day,
+          9, 30, 0, 0,
+          eastern_tz)
+        can_update_flag = now < contest_close_market_open
+        open_flag = contest.final_value < 0.0
+        if open_flag:
+          stock_name = "Current Price"
+          stock_price = get_stock_price(contest.stock.symbol)
+        else:
+          stock_name = "Final Price"
+          stock_price = contest.final_value
+
+        # find the current leader(s)
+        if open_flag:
+          min_pred = 100000.0
+          for prediction in faux_predictions:
+            delta = abs(prediction.value - stock_price) 
+            if min_pred > delta:
+              min_pred = delta
+          for prediction in faux_predictions:
+            delta = abs(prediction.value - stock_price)
+            if min_pred == delta:
+              prediction.leader = True
+
+        # add stock price to list of "faux" predictions
+        faux_predictions.append(FauxPrediction(
+          stock_name, 0, stock_price, False, True
+          ))
+        faux_predictions.sort(key=lambda p: p.value)
+        faux_predictions.reverse()
+      else:
+        faux_predictions     = []
+        can_update_flag = False
+        open_flag       = False
+        
+      template_values = {
+        'authorized':         authorized_to_view,
+        'contest':            contest,
+        'stock_price':        stock_price,
+        'predictions':        faux_predictions,
+        'can_update_flag':    can_update_flag,
+        'owner_flag':         owner_flag,
+        'open_flag':          open_flag,
+        'cur_user':           cur_user,
+        'login_url':          login_url,
+        'login_url_linktext': login_url_linktext,
+        'logged_in_flag':     logged_in_flag,
+        'prediction_error_flag': prediction_error_flag,
+        'final_value_error_flag': final_value_error_flag,
+        'passphrase_error_flag': passphrase_error_flag,
+        'error_message':      error_message,
+        'form_prediction':    form_prediction,
+        'form_final_value':   form_final_value,
+        'form_passphrase':    form_passphrase,
+        'g_footer':           g_footer,
+        'g_welcome_warning':  g_welcome_warning,
+        }
+    
+      path = os.path.join(os.path.dirname(__file__), 'contest.html')
+      self.response.out.write(template.render(path, template_values))
+    except:
+      logging.exception("HandleContest GET Error")
+      error_message = "The requested contest does not exist."
+      template_values = {
+        'error_message':      error_message,
+        'cur_user':           cur_user,
+        'login_url':          login_url,
+        'login_url_linktext': login_url_linktext,
+        'logged_in_flag':     logged_in_flag,
+        'g_footer':           g_footer,
+        'g_welcome_warning':  g_welcome_warning,
+        }
+      path = os.path.join(os.path.dirname(__file__), 'error.html')
+      self.response.out.write(template.render(path, template_values))
+      
+  def post(self,contest_id):
+    """There are 3 different forms to handle:
+    passphrase, prediction and final_value
+    """
+    if self.request.get('passphrase') != "":
+      self.authorize_contest(contest_id)
+    elif self.request.get('prediction') != "":
+      self.edit_prediction(contest_id)
+    else:
+      self.finish_contest(contest_id)
+    
+  def edit_prediction(self,contest_id):
+    try:
+      logging.info("HandleContest/%d POST edit_prediction" % int(contest_id))
+      if users.get_current_user():
+        contest = Contest.get_by_id(long(contest_id))
+        cur_user = get_my_current_user()
+        value = float(self.request.get('prediction'))
+        prediction_query = db.GqlQuery("SELECT * FROM Prediction WHERE user = :1 AND contest = :2",
+                                       cur_user,
+                                       contest)
+        predictions = prediction_query.fetch(2)
+        if predictions:
+          assert(len(predictions) == 1)
+          logging.info('found previous prediction')
+          prediction = predictions[0]
+        else:
+          logging.info('adding prediction to db')
+          prediction = Prediction()
+        prediction.user       = cur_user
+        prediction.contest    = contest
+        prediction.value      = value
+        prediction.winner     = False
+        prediction.put()
+        self.get(contest_id)
+    except:
+      logging.exception("EditPrediction Error")
+      self.get(contest_id,
+               prediction_error_flag=True,
+               error_message="There was an error with your prediction.",
+               form_prediction=self.request.get('prediction')
+               )
+
+  def finish_contest(self,contest_id):
+    try:
+      logging.info("HandleContest/%d POST finish_contest" % int(contest_id))
       contest = Contest.get_by_id(long(contest_id))
       final_value = float(self.request.get('final_value'))
       finish_contest(contest,final_value)
+      self.get(contest_id)
     except:
       logging.exception("FinishContest Error")
-    self.redirect('/contest/'+contest_id)
+      self.get(contest_id,
+               final_value_error_flag=True,
+               error_message="There was an error with your final value.",
+               form_final_value=self.request.get('final_value')
+               )
+
+  def authorize_contest(self,contest_id):
+    """Authorize the current user to view this contest
+    """
+    try:
+      logging.info("HandleContest/%d POST authorize_contest" % int(contest_id))
+      if users.get_current_user():
+        logging.info('got cur_user')
+        cur_user = get_my_current_user()
+        contest = Contest.get_by_id(long(contest_id))
+        passphrase = self.request.get('passphrase')
+        passphrase_match = contest.hashphrase == myhash(passphrase+contest.salt)
+        logging.info('passphrase=%s match=%s'%(passphrase,passphrase_match))
+        if passphrase_match:
+          cur_user.authorized_contest_list.append(contest.key())
+          cur_user.put()
+          self.get(contest_id)
+        else:
+          self.get(contest_id,
+                   passphrase_error_flag=True,
+                   error_message="Your passphrase did not match.",
+                   form_passphrase=passphrase
+                   )
+    except:
+      logging.exception("AuthorizeContest Error")
+      self.get(contest_id,
+               passphrase_error_flag=True,
+               error_message="There was an error with your passphrase.",
+               form_passphrase=passphrase
+               )
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # GET user/id
@@ -554,10 +606,10 @@ class FinishContest(webapp.RequestHandler):
 class HandleUser(webapp.RequestHandler):
   def get(self,user_id):
     try:
-      logging.info("ViewUser/%d" % int(user_id))
-      the_user = MyUser.get_by_id(long(user_id))
       cur_user = get_my_current_user()
       (logged_in_flag, login_url, login_url_linktext) = get_login_url_info(self)
+      the_user = MyUser.get_by_id(long(user_id))
+      logging.info("HandleUser/%d GET" % int(user_id))
       # TODO user privacy
       try:
         authorized_to_view = the_user.user == cur_user.user or users.is_current_user_admin()
@@ -602,14 +654,14 @@ class HandleUser(webapp.RequestHandler):
       
   def post(self,user_id):
      try:
-       logging.info("UpdateUser/%d" % int(user_id))
+       logging.info("HandleUser/%d POST" % int(user_id))
        my_user = MyUser.get_by_id(long(user_id))
        if my_user.user == users.get_current_user():
          my_user.nickname = self.request.get('nickname')
          my_user.put()
          logging.info('updated nickname to %s' % (my_user.nickname))
      except: 
-      logging.exception("UpdateUser Error")
+      logging.exception("HandleUser Error")
      self.redirect('/user/'+user_id)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -673,12 +725,9 @@ class NotFoundPageHandler(webapp.RequestHandler):
         
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 application = webapp.WSGIApplication(
-  [ ( '/',                    MainPage),            # GET/POST list of contests
-    ( '/about',               About),               # GET some info
-    (r'/contest/(.*)',        ViewContest),         # GET list predictions
-    (r'/new_prediction/(.*)', EditPrediction),      # POST prediction
-    (r'/finish/(.*)',         FinishContest),       # POST contest end
-    (r'/authorize_contest/(.*)', AuthorizeContest), # POST authorize user
+  [ ( '/',                    HandleRoot),          # GET/POST list of contests
+    ( '/about',               HandleAbout),         # GET some info
+    (r'/contest/(.*)',        HandleContest),       # GET contest detail
     (r'/user/(.*)',           HandleUser),          # GET/POST user attributes
     ( '/admin/finish_any',    FinishAnyContests),   # GET finish contests
     ( '/.*',                  NotFoundPageHandler), # 404 Error

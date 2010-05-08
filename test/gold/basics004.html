@@ -17,7 +17,9 @@
 	<li class="current_page_item"><a href="/">Home</a></li>
 	<li><a href="/about">About</a></li>
         
-	<li><a href="/_ah/login?continue=http%3A//localhost%3A8080/">Login</a></li>
+          <li><a href="/user/1">Preferences</a></li>
+        
+	<li><a href="/_ah/login?continue=http%3A//localhost%3A8080/&action=Logout">Logout</a></li>
       </ul>
     </div> <!-- end #menu -->
     <div id="page">
@@ -26,24 +28,55 @@
           <div id="content">
 
             
+
               <div class="post">
-                <div class="entry"><i>Login to create a contest.</i></div>
-              </div>         
+                <h2 class="title">Create A New Contest</h2>
+                
+                <div class="post">
+                  <div class="error"><b>ERROR: contest date must be in the future</b></div>
+                </div>         
+                
+                <div id="search" class="entry">
+                  <form action="/" method="post">
+                    <div class="entry">
+                      Stock Symbol: 
+                      <input type="text" name="symbol" size="7"
+                             maxlength="7" value=test>
+                      Date: YYYY/MM/DD
+                      <input type="text" name="year"  size="4"
+                      maxlength="4" value=2010> /
+                      <input type="text" name="month" size="2"
+                      maxlength="2" value=5> /
+                      <input type="text" name="day"   size="2"
+                      maxlength="2" value=1>
+                      <br>
+                      Private?
+                      <input type="checkbox" name="private" value="1"
+                             
+                             >
+                      <br>
+                      Passphrase:
+                      <input type="text" name="passphrase" size="32"
+                             maxlength="64" value=>
+                    </div> <!-- end #entry -->
+                    <center>
+                    <input type="submit" value="Create">
+                    </center>
+                </form>
+                </div> <!-- end #entry -->
+                <h2 class="entry"></h2>
+                <h2 class="entry"></h2>
+                <h2 class="entry"></h2>
+                <h2 class="entry"></h2>
+                <h2 class="entry"></h2>
+                <h2 class="entry"></h2>
+              </div> <!-- end #post -->
             
 
             <div class="post">
               <h2 class="title">Current Contests</h2>
               <div class="entry">
                 <ul>
-                  
-                    <li> <a href="contest/3">
-                        TEST - 
-                        2011-10-10</a> -
-                        
-                          <a href="user/1">
-                            test@example.com</a>
-                        
-                    </li>
                   
                 </ul>
               </div> <!-- end #entry -->

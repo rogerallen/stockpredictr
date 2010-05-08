@@ -67,9 +67,15 @@
                     {% if can_update_flag %}
                     <p>Enter your prediction here.  You may update it until the
                       contest is closed</p>
-                    <form action="/new_prediction/{{contest.key.id}}" method="post">
+                    {% if prediction_error_flag %}
+                    <div class="post">
+                      <div class="error"><b>ERROR: {{error_message}}</b></div>
+                    </div>         
+                    {% endif %}
+                    <form action="/contest/{{contest.key.id}}" method="post">
                       Prediction: 
-                      <input type="text" name="prediction">
+                      <input type="text" name="prediction" 
+                             value={{ form_prediction }} >
                     </form>
                     {% else %}
                     <p>No more prediction updates are allowed.  The contest
@@ -89,7 +95,12 @@
                       will automatically finalize a contest for you, but
                       should something go awry, enter a value yourself.
                       A negative value keeps the contest open.</p>
-                    <form action="/finish/{{contest.key.id}}" method="post">
+                    {% if final_value_error_flag %}
+                    <div class="post">
+                      <div class="error"><b>ERROR: {{error_message}}</b></div>
+                    </div>         
+                    {% endif %}
+                    <form action="/contest/{{contest.key.id}}" method="post">
                       Final Value: 
                       <input type="text" name="final_value" value="{{contest.final_value}}">
                     </form>
@@ -104,9 +115,15 @@
                       contest.
                     {% if cur_user %}
                       Enter the passphrase to view.</p>
-                      <form action="/authorize_contest/{{contest.key.id}}" method="post">
+                      {% if passphrase_error_flag %}
+                      <div class="post">
+                        <div class="error"><b>ERROR: {{error_message}}</b></div>
+                      </div>         
+                      {% endif %}
+                      <form action="/contest/{{contest.key.id}}" method="post">
                         Passphrase: 
-                        <input type="text" name="passphrase">
+                        <input type="text" name="passphrase"
+                               value={{ form_passphrase }} >
                       </form>
                     {% else %}
                       <i>Login to view.</i></p>
