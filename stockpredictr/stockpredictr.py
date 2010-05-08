@@ -492,7 +492,7 @@ class UpdateUser(webapp.RequestHandler):
        if my_user.user == users.get_current_user():
          my_user.nickname = self.request.get('nickname')
          my_user.put()
-         logging.info('updated nickname to %s' % (new_nickname))
+         logging.info('updated nickname to %s' % (my_user.nickname))
      except: 
       logging.exception("UpdateUser Error")
      self.redirect('/user/'+user_id)
