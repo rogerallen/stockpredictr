@@ -369,6 +369,7 @@ class ViewContest(webapp.RequestHandler):
         stock_name, 0, stock_price, False, True
         ))
       faux_predictions.sort(key=lambda p: p.value)
+      faux_predictions.reverse()
 
     else:
       faux_predictions     = []
