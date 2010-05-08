@@ -28,23 +28,38 @@
           <div id="content">
 
             {% if logged_in_flag %}
+
               <div class="post">
                 <h2 class="title">Create A New Contest</h2>
+                {% if error_flag %}
+                <div class="post">
+                  <div class="error"><b>ERROR: {{error_message}}</b></div>
+                </div>         
+                {% endif %}
                 <div id="search" class="entry">
-                  <form action="/new_contest" method="post">
+                  <form action="/" method="post">
                     <div class="entry">
                       Stock Symbol: 
-                      <input type="text" name="symbol" size="7" maxlength="7">
+                      <input type="text" name="symbol" size="7"
+                             maxlength="7" value={{ form_symbol }}>
                       Date: YYYY/MM/DD
-                      <input type="text" name="year"  size="4" maxlength="4"> /
-                      <input type="text" name="month" size="2" maxlength="2"> /
-                      <input type="text" name="day"   size="2" maxlength="2">
+                      <input type="text" name="year"  size="4"
+                      maxlength="4" value={{ form_year }}> /
+                      <input type="text" name="month" size="2"
+                      maxlength="2" value={{ form_month }}> /
+                      <input type="text" name="day"   size="2"
+                      maxlength="2" value={{ form_day }}>
                       <br>
                       Private?
-                      <input type="checkbox" name="private" value="1">
+                      <input type="checkbox" name="private" value="1"
+                             {% if form_private %}
+                             checked="1"
+                             {% endif %}
+                             >
                       <br>
                       Passphrase:
-                      <input type="text" name="passphrase" size="32" maxlength="64">
+                      <input type="text" name="passphrase" size="32"
+                             maxlength="64" value={{ form_passphrase }}>
                     </div> <!-- end #entry -->
                     <center>
                     <input type="submit" value="Create">
@@ -119,13 +134,7 @@
 	  <div id="sidebar">
 	    <ul>
 	      <li>&nbsp;</li>
-              <li>
-		<h2>Welcome & Warning</h2>
-		<p>Welcome to Stockpredictr.  This site is being
-		actively developed and the software is
-		alpha-quality.  Play around, but be warned that 
-		you may encounter bugs.</p>
-	      </li>
+              <li> {{ g_welcome_warning }} </li>
 	    </ul>
 	  </div>
 	  <!-- end #sidebar -->
@@ -137,7 +146,7 @@
   </div> <!-- end #wrapper -->
 
   <div id="footer">
-    <p>Copyright (c) 2008 Stockpredictr. All rights reserved. Design by <a href="http://www.freecsstemplates.org/">Free CSS Templates</a>.</p>
+    {{ g_footer }}
   </div> <!-- end #footer -->
 
   </body>

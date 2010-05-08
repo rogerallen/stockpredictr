@@ -119,13 +119,7 @@
 	  <div id="sidebar">
 	    <ul>
 	      <li>&nbsp;</li>
-              <li>
-		<h2>Welcome & Warning</h2>
-		<p>Welcome to Stockpredictr.  This site is being
-		actively developed and the software is
-		alpha-quality.  Play around, but be warned that 
-		you may encounter bugs.</p>
-	      </li>
+              <li> {{ g_welcome_warning }} </li>
 	    </ul>
 	  </div>
 	  <!-- end #sidebar -->
@@ -137,7 +131,7 @@
   </div> <!-- end #wrapper -->
 
   <div id="footer">
-    <p>Copyright (c) 2008 Stockpredictr. All rights reserved. Design by <a href="http://www.freecsstemplates.org/">Free CSS Templates</a>.</p>
+    {{ g_footer }}
   </div> <!-- end #footer -->
 
   </body>

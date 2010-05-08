@@ -16,6 +16,24 @@ from google.appengine.ext.webapp.util import run_wsgi_app
 from google.appengine.api import urlfetch
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# some global strings
+g_footer = """
+<p>Copyright (c) 2009-2010 Stockpredictr. All rights reserved.
+Design by <a href="http://www.freecsstemplates.org/">Free CSS Templates</a>.</p>
+"""
+
+g_welcome_warning = """<h2>Welcome</h2>
+<p>Welcome to Stockpredictr, the site for stock
+prediction contests.</p>
+<h2>Warning</h2>
+<p>This site is being actively developed and the software is
+beta-quality.  Please report any issues to the
+<a href="http://code.google.com/p/stockpredictr/issues">the development
+site</a>.  Thanks!</p>
+"""
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # our databases
 class Stock(db.Model):
   """
@@ -64,8 +82,10 @@ class Prediction(db.Model):
   value   = db.FloatProperty()
   winner  = db.BooleanProperty()
 
-# a version of a prediction we use for the webpage presentation
 class FauxPrediction(object):
+  """
+  a version of a Prediction we use just for the webpage presentation
+  """
   def __init__(self,user_nickname,user_id,value,winner,is_price):
     self.user_nickname = user_nickname
     self.user_id       = user_id
@@ -106,7 +126,7 @@ class Eastern_tzinfo(datetime_module.tzinfo):
 eastern_tz = Eastern_tzinfo()
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# data utils
+# session utils
 def get_my_current_user():
   """return the MyUser for the current_user, adding if necessary"""
   if users.get_current_user() == None:
@@ -114,7 +134,6 @@ def get_my_current_user():
   
   my_users = db.GqlQuery("SELECT * FROM MyUser WHERE user = :1",
                          users.get_current_user()).fetch(1)
-  # XXX should we have a cronjob to find multiple users?
   if len(my_users) == 0:
     logging.info('adding current user %s to db' % (users.get_current_user().nickname()))
     my_user = MyUser()
@@ -130,8 +149,29 @@ def get_my_current_user():
   logging.info('get_my_current_user %s' % (my_user.nickname))
   return my_user
 
+def get_login_url_info(cls):
+  """return (logged_in_flag, login_url, login_url_linktext)."""
+  logged_in_flag = False
+  if users.get_current_user():
+    login_url = users.create_logout_url(cls.request.uri)
+    login_url_linktext = 'Logout'
+    logged_in_flag = True
+  else:
+    login_url = users.create_login_url(cls.request.uri)
+    login_url_linktext = 'Login'  
+  return (logged_in_flag, login_url, login_url_linktext)
+
+def myhash(salted_password):
+  x = hashlib.sha256()
+  x.update(salted_password)
+  return x.hexdigest()
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# stock utils
 def get_or_add_stock_from_symbol(symbol):
-  """get stock.  if it doesn't exist, add it to db"""
+  """get stock from symbol.  if it is invalid, return None.
+  if it doesn't exist, add it to db
+  """
   symbol = symbol.upper()
   stock = get_stock_from_symbol(symbol)
   if stock == None:
@@ -148,7 +188,7 @@ def get_or_add_stock_from_symbol(symbol):
   return stock
 
 def get_stock_from_symbol(symbol):
-  """return the Stock for the symbol"""
+  """return the Stock for the symbol.  None if it doesn't exist."""
   symbol = symbol.upper()
   stocks   = db.GqlQuery("SELECT * FROM Stock WHERE symbol = :1",
                          symbol).fetch(1)
@@ -158,18 +198,6 @@ def get_stock_from_symbol(symbol):
     assert(len(stocks) == 1)
     stock = stocks[0]
   return stock
-
-def get_login_url_info(cls):
-  """return (logged_in_flag, login_url, login_url_linktext)"""
-  logged_in_flag = False
-  if users.get_current_user():
-    login_url = users.create_logout_url(cls.request.uri)
-    login_url_linktext = 'Logout'
-    logged_in_flag = True
-  else:
-    login_url = users.create_login_url(cls.request.uri)
-    login_url_linktext = 'Login'  
-  return (logged_in_flag, login_url, login_url_linktext)
 
 STOCK_CACHE_SECONDS = 60 # Update every minute, at most
 def get_stock_price(symbol):
@@ -209,16 +237,29 @@ def get_stock_price_uncached(symbol):
   logging.info("stock price = %s" % (stock_price))
   return stock_price
 
-def myhash(salted_password):
-  x = hashlib.sha256()
-  x.update(salted_password)
-  return x.hexdigest()
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# shared make_private routine
+def make_private(contest, private, passphrase):
+  contest.private = private
+  if contest.private:
+    logging.info('this is a private contest')
+    contest.salt       = str(int(random.randint(1000,10000)))
+    contest.hashphrase = myhash(passphrase+contest.salt)
+  else:
+    logging.info('this is a public contest')
+    contest.salt       = None
+    contest.hashphrase = None
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# our webpages
-# index.html
+# GET index.html
+# POST / for a new_contest
 class MainPage(webapp.RequestHandler):
-  def get(self):
+  def get(self,
+          error_flag=False, error_message=None,
+          form_symbol="",
+          form_year="", form_month="", form_day="",
+          form_private="", form_passphrase=""
+          ):
     # TODO - user privacy
     #users_query = db.GqlQuery("SELECT * FROM MyUser WHERE win_pct > 0.0 ORDER BY win_pct DESC")
     #users = users_query.fetch(25)
@@ -245,38 +286,21 @@ class MainPage(webapp.RequestHandler):
       'login_url':          login_url,
       'login_url_linktext': login_url_linktext,
       'logged_in_flag':     logged_in_flag,
+      'error_flag':         error_flag,
+      'error_message':      error_message,
+      'form_symbol':        form_symbol,
+      'form_year':          form_year,
+      'form_month':         form_month,
+      'form_day':           form_day,
+      'form_private':       form_private,
+      'form_passphrase':    form_passphrase,
+      'g_footer':           g_footer,
+      'g_welcome_warning':  g_welcome_warning,
       }
     
     path = os.path.join(os.path.dirname(__file__), 'index.html')
     self.response.out.write(template.render(path, template_values))
 
-# about.html
-class About(webapp.RequestHandler):
-  def get(self):
-    (logged_in_flag, login_url, login_url_linktext) = get_login_url_info(self)
-    cur_user = get_my_current_user()
-    template_values = {
-      'cur_user':            cur_user,
-      'login_url':          login_url,
-      'login_url_linktext': login_url_linktext,
-      }
-    path = os.path.join(os.path.dirname(__file__), 'about.html')
-    self.response.out.write(template.render(path, template_values))
-
-# shared make_private routine
-def make_private(contest, private, passphrase):
-  contest.private = private
-  if contest.private:
-    logging.info('this is a private contest')
-    contest.salt       = str(int(random.randint(1000,10000)))
-    contest.hashphrase = myhash(passphrase+contest.salt)
-  else:
-    logging.info('this is a public contest')
-    contest.salt       = None
-    contest.hashphrase = None
-
-# /contest/
-class CreateContest(webapp.RequestHandler):
   def post(self):
     try:
       if users.get_current_user():
@@ -284,8 +308,7 @@ class CreateContest(webapp.RequestHandler):
         cur_user = get_my_current_user()
         stock = get_or_add_stock_from_symbol(self.request.get('symbol'))
         if stock == None:
-          logging.error('bad stock symbol')
-          raise ValueError
+          raise ValueError('could not find the stock symbol')
         logging.info('adding contest to db')
         contest = Contest()
         contest.owner        = cur_user
@@ -294,6 +317,10 @@ class CreateContest(webapp.RequestHandler):
           int(self.request.get('year')),
           int(self.request.get('month')),
           int(self.request.get('day')))
+        if contest.close_date <= datetime_module.date.today():
+          raise ValueError('contest date must be in the future')
+        if contest.close_date.weekday() >= 5:
+          raise ValueError('contest date must be a weekday')
         contest.final_value  = -1.0
         make_private(contest,
                      self.request.get('private') == '1',
@@ -301,11 +328,70 @@ class CreateContest(webapp.RequestHandler):
         contest.put()
         logging.info("contest id"+str(contest.key().id()))
         self.redirect('/contest/'+str(contest.key().id()))
+    except ValueError as verr:
+      logging.exception("CreateContest ValueError")
+      self.get(error_flag      = True,
+               error_message   = verr,
+               form_symbol     = self.request.get('symbol'),
+               form_year       = self.request.get('year'),
+               form_month      = self.request.get('month'),
+               form_day        = self.request.get('day'),
+               form_private    = self.request.get('private'),
+               form_passphrase = self.request.get('passphrase'),
+               )
     except:
       logging.exception("CreateContest Error")
-      self.redirect('/')
+      self.get(error_flag      = True,
+               error_message   = "There was an error.  Sorry I can't be more specific.",
+               form_symbol     = self.request.get('symbol'),
+               form_year       = self.request.get('year'),
+               form_month      = self.request.get('month'),
+               form_day        = self.request.get('day'),
+               form_private    = self.request.get('private'),
+               form_passphrase = self.request.get('passphrase'),
+               )
+
   
-# contest.html
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# GET about.html
+class About(webapp.RequestHandler):
+  def get(self):
+    (logged_in_flag, login_url, login_url_linktext) = get_login_url_info(self)
+    cur_user = get_my_current_user()
+    template_values = {
+      'cur_user':            cur_user,
+      'login_url':          login_url,
+      'login_url_linktext': login_url_linktext,
+      'g_footer':           g_footer,
+      'g_welcome_warning':  g_welcome_warning,
+      }
+    path = os.path.join(os.path.dirname(__file__), 'about.html')
+    self.response.out.write(template.render(path, template_values))
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# POST authorize_contest/id
+class AuthorizeContest(webapp.RequestHandler):
+  """Authorize the current user to view this contest
+  """
+  def post(self,contest_id):
+    logging.info('AuthorizeContest')
+    try:
+      if users.get_current_user():
+        logging.info('got cur_user')
+        cur_user = get_my_current_user()
+        contest = Contest.get_by_id(long(contest_id))
+        passphrase = self.request.get('passphrase')
+        passphrase_match = contest.hashphrase == myhash(passphrase+contest.salt)
+        logging.info('passphrase=%s match=%s'%(passphrase,passphrase_match))
+        if passphrase_match:
+          cur_user.authorized_contest_list.append(contest.key())
+          cur_user.put()
+    except:
+      logging.exception("AuthorizeContest Error")
+    self.redirect('/contest/'+contest_id)
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# GET contest/id
 class ViewContest(webapp.RequestHandler):
   def get(self,contest_id):
     logging.info("ViewContest/%d" % int(contest_id))
@@ -388,11 +474,15 @@ class ViewContest(webapp.RequestHandler):
       'login_url':          login_url,
       'login_url_linktext': login_url_linktext,
       'logged_in_flag':     logged_in_flag,
+      'g_footer':           g_footer,
+      'g_welcome_warning':  g_welcome_warning,
       }
     
     path = os.path.join(os.path.dirname(__file__), 'contest.html')
     self.response.out.write(template.render(path, template_values))
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# POST new_prediction/id
 class EditPrediction(webapp.RequestHandler):
   def post(self,contest_id):
     try:
@@ -422,7 +512,11 @@ class EditPrediction(webapp.RequestHandler):
 
     self.redirect('/contest/'+contest_id)
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def finish_contest(contest, final_value):
+  """
+  Finalize a contest's final_value and prediction winner
+  """
   logging.info("Closing contest %s %s" % ( contest.owner, contest.stock ))
   contest.final_value = final_value
   contest.put()
@@ -441,6 +535,8 @@ def finish_contest(contest, final_value):
         prediction.winner = True
         prediction.put()
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# POST finish/id
 class FinishContest(webapp.RequestHandler):
   def post(self,contest_id):
     try:
@@ -452,7 +548,10 @@ class FinishContest(webapp.RequestHandler):
       logging.exception("FinishContest Error")
     self.redirect('/contest/'+contest_id)
 
-class ViewUser(webapp.RequestHandler):
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# GET user/id
+# POST user/id 
+class HandleUser(webapp.RequestHandler):
   def get(self,user_id):
     logging.info("ViewUser/%d" % int(user_id))
     the_user = MyUser.get_by_id(long(user_id))
@@ -480,11 +579,12 @@ class ViewUser(webapp.RequestHandler):
       'login_url':          login_url,
       'login_url_linktext': login_url_linktext,
       'logged_in_flag':     logged_in_flag,
+      'g_footer':           g_footer,
+      'g_welcome_warning':  g_welcome_warning,
       }
     path = os.path.join(os.path.dirname(__file__), 'user.html')
     self.response.out.write(template.render(path, template_values))
 
-class UpdateUser(webapp.RequestHandler):
   def post(self,user_id):
      try:
        logging.info("UpdateUser/%d" % int(user_id))
@@ -497,6 +597,10 @@ class UpdateUser(webapp.RequestHandler):
       logging.exception("UpdateUser Error")
      self.redirect('/user/'+user_id)
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# GET /admin/finish_any
+# - only admin allowed via app.yaml
+# - should be called by cron only
 class FinishAnyContests(webapp.RequestHandler):
   def get(self):
     logging.info('FinishAnyContests called')
@@ -528,37 +632,41 @@ class FinishAnyContests(webapp.RequestHandler):
     self.response.headers['Content-Type'] = 'text/plain'
     self.response.out.write('Done')
 
-class AuthorizeContest(webapp.RequestHandler):
-  def post(self,contest_id):
-    logging.info('AuthorizeContest')
-    try:
-      if users.get_current_user():
-        logging.info('got cur_user')
-        cur_user = get_my_current_user()
-        contest = Contest.get_by_id(long(contest_id))
-        passphrase = self.request.get('passphrase')
-        passphrase_match = contest.hashphrase == myhash(passphrase+contest.salt)
-        logging.info('passphrase=%s match=%s'%(passphrase,passphrase_match))
-        if passphrase_match:
-          cur_user.authorized_contest_list.append(contest.key())
-          cur_user.put()
-    except:
-      logging.exception("AuthorizeContest Error")
-    self.redirect('/contest/'+contest_id)
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# GET catchall for any page not otherwise handled
+class NotFoundPageHandler(webapp.RequestHandler):
+  def get(self):
+    logging.info("NotFoundPageHandler")
+    cur_user = get_my_current_user()
+    (logged_in_flag, login_url, login_url_linktext) = get_login_url_info(self)
 
+    error_message = "The requested page could not be found.  This is also known as a '404 Error'"
+    self.error(404)
+    template_values = {
+      'error_message':      error_message,
+      'cur_user':           cur_user,
+      'login_url':          login_url,
+      'login_url_linktext': login_url_linktext,
+      'logged_in_flag':     logged_in_flag,
+      'g_footer':           g_footer,
+      'g_welcome_warning':  g_welcome_warning,
+      }
+    
+    path = os.path.join(os.path.dirname(__file__), 'error.html')
+    self.response.out.write(template.render(path, template_values))
+                    
         
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 application = webapp.WSGIApplication(
-  [ ( '/',                    MainPage),       # GET list of contests
-    ( '/about',               About),          # GET what is this site about?
-    ( '/new_contest',         CreateContest),  # POST a new contest
-    (r'/authorize_contest/(.*)', AuthorizeContest), # POST authorize user for contest
-    (r'/contest/(.*)',        ViewContest),    # GET list predictions
-    (r'/new_prediction/(.*)', EditPrediction), # POST prediction
-    (r'/finish/(.*)',         FinishContest),  # POST contest end
-    (r'/user/(.*)',           ViewUser),       # GET user attributes
-    (r'/update_user/(.*)',    UpdateUser),     # POST user attributes
-    ( '/admin/finish_any',    FinishAnyContests), # GET finish contests
+  [ ( '/',                    MainPage),            # GET/POST list of contests
+    ( '/about',               About),               # GET some info
+    (r'/authorize_contest/(.*)', AuthorizeContest), # POST authorize user
+    (r'/contest/(.*)',        ViewContest),         # GET list predictions
+    (r'/new_prediction/(.*)', EditPrediction),      # POST prediction
+    (r'/finish/(.*)',         FinishContest),       # POST contest end
+    (r'/user/(.*)',           HandleUser),          # GET/POST user attributes
+    ( '/admin/finish_any',    FinishAnyContests),   # GET finish contests
+    ( '/.*',                  NotFoundPageHandler), # 404 Error
     ],
   debug=True)
 
