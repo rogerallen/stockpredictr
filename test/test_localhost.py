@@ -28,12 +28,12 @@ def get_comparison(url, gold_file_name, values=None, headers={}):
     response = urllib2.urlopen(request)
     the_page = response.read()
     if GILD:
-        gold_page = open(gold_file_name,'w')
+        gold_page = open('lead/'+gold_file_name,'w')
         print >>gold_page, the_page,
         gold_page.close()
         return ([],[])
     else:
-        gold_page = open(gold_file_name).read()
+        gold_page = open('gold/'+gold_file_name).read()
         the_page_lines = the_page.split('\n')
         gold_page_lines = gold_page.split('\n')
         return (the_page_lines, gold_page_lines)
@@ -43,14 +43,14 @@ class TestBasics(unittest.TestCase):
 
     def test000RootNoLogin(self):
         (the_page_lines, gold_page_lines) = get_comparison(
-            SITE,'gold/basics000.html'
+            SITE,'basics000.html'
             )
         for i in range(len(max(the_page_lines,gold_page_lines))):
             self.assertEqual(the_page_lines[i],gold_page_lines[i])
 
     def test001RootWithLogin(self):
         (the_page_lines, gold_page_lines) = get_comparison(
-            SITE,'gold/basics001.html',
+            SITE,'basics001.html',
             headers={'User-Agent': USERAGENT,
                      'Cookie':NOADMIN_COOKIE
                      }
@@ -60,7 +60,7 @@ class TestBasics(unittest.TestCase):
 
     def test002RootAddBadStock(self):
         (the_page_lines, gold_page_lines) = get_comparison(
-            SITE,'gold/basics002.html',
+            SITE,'basics002.html',
             values={'symbol': 'nxxx'},
             headers={'Cookie':NOADMIN_COOKIE}
             )
@@ -70,7 +70,7 @@ class TestBasics(unittest.TestCase):
     def test003RootAddMissingDate(self):
         # TODO - this error is not that great
         (the_page_lines, gold_page_lines) = get_comparison(
-            SITE,'gold/basics003.html',
+            SITE,'basics003.html',
             values={'symbol':     'test',
                     'year':       '',
                     'month':      '',
@@ -85,7 +85,7 @@ class TestBasics(unittest.TestCase):
         
     def test004RootAddDateInPast(self):
         (the_page_lines, gold_page_lines) = get_comparison(
-            SITE,'gold/basics004.html',
+            SITE,'basics004.html',
             values={'symbol':     'test',
                     'year':       '2010',
                     'month':      '5',
@@ -100,7 +100,7 @@ class TestBasics(unittest.TestCase):
         
     def test005RootAddPublic(self):
         (the_page_lines, gold_page_lines) = get_comparison(
-            SITE,'gold/basics005.html',
+            SITE,'basics005.html',
             values={'symbol':     'test',
                     'year':       '2011',
                     'month':      '10',
@@ -118,7 +118,7 @@ if __name__ == "__main__":
     print "You better have google app engine running."
     print "You need to start from a clear config, too"
     if len(sys.argv) > 1 and 'gild' in sys.argv:
-        print "GILD MODE ON"
+        print "GILD MODE ON.  Writing files to the 'lead' directory."
         GILD=True
         sys.argv.remove('gild')
     unittest.main()

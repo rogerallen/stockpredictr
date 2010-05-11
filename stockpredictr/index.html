@@ -27,57 +27,73 @@
         <div id="page-bgbtm">
           <div id="content">
 
-            {% if logged_in_flag %}
+            <div class="post">
+              <div class="entry">
+                <p>Welcome to Stockpredictr, the site for stock
+                prediction contests.  Join the fun by finding a
+                contest and try to guess closer to the closing stock
+                price better than anyone else.</p>
 
-              <div class="post">
-                <h2 class="title">Create A New Contest</h2>
-                {% if error_flag %}
+                <p>If you don't see a contest to join, create a new
+                contest for you and your friends.<p>
+
+                <p>Contests can be open to anyone or 'private' and
+                open only to those who know the passphrase.</p>
+
+              </div> <!-- end #entry -->
+            </div> <!-- end #post -->
+              
+            <div class="post">
+              <h2 class="title">Create A New Contest</h2>
+                {% if logged_in_flag %}
+
+                  {% if error_flag %}
+                  <div class="post">
+                    <div class="error"><b>ERROR: {{error_message}}</b></div>
+                  </div>         
+                  {% endif %}
+                  <div id="search" class="entry">
+                    <form action="/" method="post">
+                      <div class="entry">
+                        Stock Symbol: 
+                        <input type="text" name="symbol" size="7"
+                               maxlength="7" value={{ form_symbol }}>
+                        Date: YYYY/MM/DD
+                        <input type="text" name="year"  size="4"
+                        maxlength="4" value={{ form_year }}> /
+                        <input type="text" name="month" size="2"
+                        maxlength="2" value={{ form_month }}> /
+                        <input type="text" name="day"   size="2"
+                        maxlength="2" value={{ form_day }}>
+                        <br>
+                        Private?
+                        <input type="checkbox" name="private" value="1"
+                               {% if form_private %}
+                               checked="1"
+                               {% endif %}
+                               >
+                        <br>
+                        Passphrase:
+                        <input type="text" name="passphrase" size="32"
+                               maxlength="64" value={{ form_passphrase }}>
+                      </div> <!-- end #entry -->
+                      <center>
+                      <input type="submit" value="Create">
+                      </center>
+                  </form>
+                  </div> <!-- end #entry -->
+                  <h2 class="entry"></h2>
+                  <h2 class="entry"></h2>
+                  <h2 class="entry"></h2>
+                  <h2 class="entry"></h2>
+                  <h2 class="entry"></h2>
+                  <h2 class="entry"></h2>
+              {% else %}
                 <div class="post">
-                  <div class="error"><b>ERROR: {{error_message}}</b></div>
+                  <div class="entry"><i><a href="{{ login_url }}">Login</a> to create a contest.</i></div>
                 </div>         
-                {% endif %}
-                <div id="search" class="entry">
-                  <form action="/" method="post">
-                    <div class="entry">
-                      Stock Symbol: 
-                      <input type="text" name="symbol" size="7"
-                             maxlength="7" value={{ form_symbol }}>
-                      Date: YYYY/MM/DD
-                      <input type="text" name="year"  size="4"
-                      maxlength="4" value={{ form_year }}> /
-                      <input type="text" name="month" size="2"
-                      maxlength="2" value={{ form_month }}> /
-                      <input type="text" name="day"   size="2"
-                      maxlength="2" value={{ form_day }}>
-                      <br>
-                      Private?
-                      <input type="checkbox" name="private" value="1"
-                             {% if form_private %}
-                             checked="1"
-                             {% endif %}
-                             >
-                      <br>
-                      Passphrase:
-                      <input type="text" name="passphrase" size="32"
-                             maxlength="64" value={{ form_passphrase }}>
-                    </div> <!-- end #entry -->
-                    <center>
-                    <input type="submit" value="Create">
-                    </center>
-                </form>
-                </div> <!-- end #entry -->
-                <h2 class="entry"></h2>
-                <h2 class="entry"></h2>
-                <h2 class="entry"></h2>
-                <h2 class="entry"></h2>
-                <h2 class="entry"></h2>
-                <h2 class="entry"></h2>
-              </div> <!-- end #post -->
-            {% else %}
-              <div class="post">
-                <div class="entry"><i>Login to create a contest.</i></div>
-              </div>         
-            {% endif %}
+              {% endif %}
+            </div> <!-- end #post -->
 
             <div class="post">
               <h2 class="title">Current Contests</h2>

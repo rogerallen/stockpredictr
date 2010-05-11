@@ -9,9 +9,7 @@
     <div id="header">
       <div id="logo">
         <h1><a href="/">Stockpredictr</a></h1>
-        <br>
-        <p>User: <a href="/user/{{the_user.key.id}}">
-          {{ the_user.nickname }}</a></p>
+        <p>Satisfy your predilection for prediction.</p>
       </div> <!-- end #logo -->
     </div> <!-- end #header -->
     <div id="menu">
@@ -28,8 +26,41 @@
       <div id="page-bgtop">
         <div id="page-bgbtm">
           <div id="content">
+
+            {% if authorized_to_edit %}
+              <div class="post">
+                <h2 class="title">Your Google Info</h2>
+                <div class="entry">
+                  <p>This is the info from Google on you.  This
+                  information is not shown to others.</p>
+                  <table>
+                    <tr>
+                      <th>Nickname</th>
+                      <td>{{the_user.user.nickname}}</td>
+                      <td>(your default Stockpredictr nickname)</td>
+                    </tr>
+                    <tr>
+                      <th>Email</th>
+                      <td>{{the_user.user.email}}</td>
+                    </tr>
+                  </table>
+                </div> <!-- end #entry -->
+              </div> <!-- end #post -->
+              <div class="post">
+                <h2 class="title">Update Your User Data</h2>
+                <p>You may update your own user info here.</p>
+                <div id="search" class="entry">
+                  <form action="/user/{{the_user.key.id}}" method="post">
+                    Stockpredictr Nickname: <input type="text" name="nickname" value="{{ the_user.nickname }}">
+                  </form>
+                </div> <!-- end #entry -->
+              </div> <!-- end #post -->
+	      <div style="clear: both;">&nbsp;</div>
+
+            {% endif %}
+
             <div class="post">
-              <h2 class="title">Closed Predictions</h2>
+              <h2 class="title">Past Predictions</h2>
               <div class="entry">
                 <ul>
                   <li>{{ the_user.wins }} wins,
@@ -73,37 +104,6 @@
                   </ul>
                 </div> <!-- end #entry -->
               </div> <!-- end #post -->
-            {% endif %}
-
-            {% if authorized_to_edit %}
-              <div class="post">
-                <h2 class="title">Update Your User Data</h2>
-                <div id="search" class="entry">
-                  <p>You may update your own user info here.</p>
-                  <form action="/user/{{the_user.key.id}}" method="post">
-                    Nickname: <input type="text" name="nickname" value="{{ the_user.nickname }}">
-                  </form>
-                </div> <!-- end #entry -->
-              </div> <!-- end #post -->
-	      <div style="clear: both;">&nbsp;</div>
-              <div class="post">
-                <h2 class="title">Your Google Info</h2>
-                <div class="entry">
-                  <p>This is the info from Google on you:</p>
-                  <table>
-                    <tr>
-                      <th>Nickname</th>
-                      <td>{{the_user.user.nickname}}</td>
-                      <td>(this is different from Stockpredictr's nickname)</td>
-                    </tr>
-                    <tr>
-                      <th>Email</th>
-                      <td>{{the_user.user.email}}</td>
-                    </tr>
-                  </table>
-                </div> <!-- end #entry -->
-              </div> <!-- end #post -->
-
             {% endif %}
 
           </div> <!-- end #content -->

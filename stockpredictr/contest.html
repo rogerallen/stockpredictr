@@ -9,11 +9,7 @@
     <div id="header">
       <div id="logo">
         <h1><a href="/">Stockpredictr</a></h1>
-        <br>
-        <p>Contest:<a href="/contest/{{contest.key.id}}">
-          {{ contest.stock.symbol }} -
-          {{ contest.close_date }}</a> by 
-          <a href="/user/{{contest.owner.key.id}}">{{ contest.owner.nickname }}</a></p>
+        <p>Satisfy your predilection for prediction.</p>
       </div> <!-- end #logo -->
     </div> <!-- end #header -->
     <div id="menu">
@@ -31,6 +27,22 @@
         <div id="page-bgbtm">
           <div id="content">
             {% if authorized %}
+              <div class="post">
+                <div class="entry">
+                  <p><b><i>Contest <a href="/contest/{{contest.key.id}}">
+                      {{ contest.stock.symbol }} -
+                      {{ contest.close_date }}</a> owned by 
+                    <a href="/user/{{contest.owner.key.id}}">
+                      {{ contest.owner.nickname }}</a>.
+                  </i></b></p>
+                  <p>Enter the dollar amount below that you think the 
+                    {{ contest.stock.symbol }} stock price will be at the
+                    market close on {{ contest.close_date }}.  The
+                    contest will remain open and you can change your
+                    guess until the market opens on 
+                    {{ contest.close_date }}.</p>
+                </div>
+              </div>
               <div class="post">
                 <h2 class="title">Contest Entries</h2>
                 <div class="entry">
@@ -60,27 +72,31 @@
                 </div> <!-- end #entry -->
               </div> <!-- end #post -->
 
-              {% if logged_in_flag and open_flag %}
+              {% if open_flag %}
                 <div class="post">
                   <h2 class="title">Enter Your Prediction</h2>
                   <div class="entry">
-                    {% if can_update_flag %}
-                    <p>Enter your prediction here.  You may update it until the
-                      contest is closed</p>
-                    {% if prediction_error_flag %}
-                    <div class="post">
-                      <div class="error"><b>ERROR: {{error_message}}</b></div>
-                    </div>         
-                    {% endif %}
-                    <form action="/contest/{{contest.key.id}}" method="post">
-                      Prediction: 
-                      <input type="text" name="prediction" 
-                             value={{ form_prediction }} >
-                    </form>
+                    {% if logged_in_flag %} 
+                      {% if can_update_flag %}
+                      <p>Enter your prediction here.  You may update it until the
+                        contest is closed</p>
+                      {% if prediction_error_flag %}
+                      <div class="post">
+                        <div class="error"><b>ERROR: {{error_message}}</b></div>
+                      </div>         
+                      {% endif %}
+                      <form action="/contest/{{contest.key.id}}" method="post">
+                        Prediction: 
+                        <input type="text" name="prediction" 
+                               value={{ form_prediction }} >
+                      </form>
+                      {% else %}
+                      <p>No more prediction updates are allowed.  The contest
+                      ends today and the market is open at 9:30AM Eastern
+                      time. Come back at 4PM Eastern time to see who won!</p>
+                      {% endif %}
                     {% else %}
-                    <p>No more prediction updates are allowed.  The contest
-                    ends today and the market is open at 9:30AM Eastern
-                    time. Come back at 4PM Eastern time to see who won!</p>
+                      <b><i><a href="{{ login_url }}">Login</a> to enter.</i><b>
                     {% endif %}
                   </div> <!-- end #entry -->
                 </div> <!-- end #post -->

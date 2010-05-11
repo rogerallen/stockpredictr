@@ -441,11 +441,12 @@ class HandleContest(webapp.RequestHandler):
           eastern_tz)
         can_update_flag = now < contest_close_market_open
         open_flag = contest.final_value < 0.0
+        stock_name = contest.stock.symbol
         if open_flag:
-          stock_name = "Current Price"
+          stock_name += " Current Price"
           stock_price = get_stock_price(contest.stock.symbol)
         else:
-          stock_name = "Final Price"
+          stock_name += " Final Price"
           stock_price = contest.final_value
 
         # find the current leader(s)
