@@ -602,6 +602,46 @@ class HandleContest(webapp.RequestHandler):
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def get_contest_index(s):
+  try:
+    i = int(s)
+  except ValueError:
+    i = 0
+  return i
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# GET /contests
+class HandleContests(webapp.RequestHandler):
+  def get(self):
+    (logged_in_flag, login_url, login_url_linktext) = get_login_url_info(self)
+    cur_user = get_my_current_user()
+    contest_count = 25
+    cur_index = get_contest_index(self.request.get('i'))
+    contests_query = db.GqlQuery(
+      "SELECT * FROM Contest ORDER BY close_date DESC")
+    # TODO eventual bugfix: offset must be less than 1000
+    contests = contests_query.fetch(contest_count,cur_index)
+    later_index = max(0,cur_index-contest_count)
+    later_contests_flag = later_index < cur_index
+    earlier_index = cur_index+len(contests)
+    # TODO this isn't perfect
+    earlier_contests_flag = earlier_index == cur_index+contest_count
+    template_values = {
+      'cur_user':              cur_user,
+      'login_url':             login_url,
+      'login_url_linktext':    login_url_linktext,
+      'g_footer':              g_footer,
+      'g_welcome_warning':     g_welcome_warning,
+      'contests':              contests,
+      'later_contests_flag':   later_contests_flag,
+      'earlier_contests_flag': earlier_contests_flag,
+      'later_index':           later_index,
+      'earlier_index':         earlier_index
+      }
+    path = os.path.join(os.path.dirname(__file__), 'contests.html')
+    self.response.out.write(template.render(path, template_values))
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # GET user/id
 # POST user/id 
 class HandleUser(webapp.RequestHandler):
@@ -769,6 +809,7 @@ application = webapp.WSGIApplication(
   [ ( '/',                    HandleRoot),          # GET/POST list of contests
     ( '/about',               HandleAbout),         # GET some info
     (r'/contest/(.*)',        HandleContest),       # GET contest detail
+    ( '/contests',            HandleContests),      # GET list of contests
     (r'/user/(.*)',           HandleUser),          # GET/POST user attributes
     ( '/admin/finish_any',    FinishAnyContests),   # GET finish contests
     ( '/admin/do_that_thing', DoThatThing),         # GET something special

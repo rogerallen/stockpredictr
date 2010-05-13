@@ -37,7 +37,19 @@ def get_comparison(url, gold_file_name, values=None, headers={}):
         the_page_lines = the_page.split('\n')
         gold_page_lines = gold_page.split('\n')
         return (the_page_lines, gold_page_lines)
-    
+
+def fetch_url(url, values=None, headers={}):
+    """Common routine to open a url and return the lines from the page..
+    """
+    if values:
+        data = urllib.urlencode(values)
+    else:
+        data = None
+    request  = urllib2.Request(url,data=data,headers=headers)
+    response = urllib2.urlopen(request)
+    the_page = response.read()
+    return the_page
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 class TestBasics(unittest.TestCase):
 
@@ -112,6 +124,85 @@ class TestBasics(unittest.TestCase):
             )
         for i in range(len(max(the_page_lines,gold_page_lines))):
             self.assertEqual(the_page_lines[i],gold_page_lines[i])
+
+    def test006AboutNoLogin(self):
+        (the_page_lines, gold_page_lines) = get_comparison(
+            SITE+'about','basics006.html'
+            )
+        for i in range(len(max(the_page_lines,gold_page_lines))):
+            self.assertEqual(the_page_lines[i],gold_page_lines[i])
+
+    def test007UserWithLogin(self):
+        (the_page_lines, gold_page_lines) = get_comparison(
+            SITE+'user/1','basics007.html',
+            headers={'User-Agent': USERAGENT,
+                     'Cookie':NOADMIN_COOKIE
+                     }
+            )
+        for i in range(len(max(the_page_lines,gold_page_lines))):
+            self.assertEqual(the_page_lines[i],gold_page_lines[i])
+
+    def test010AddLotsOfTests(self):
+        # add a gob of contests
+        for month in [ '10', '11', '12' ]:
+            for day in range(30):
+                fetch_url(
+                    SITE,
+                    values={'symbol':     'test',
+                            'year':       '2011',
+                            'month':      month,
+                            'day':        str(day),
+                            'private':    '',
+                            'passphrase': ''
+                            },
+                    headers={'Cookie':NOADMIN_COOKIE}
+                    )
+        # see only 25 on homepage
+        (the_page_lines, gold_page_lines) = get_comparison(
+            SITE,'basics010a.html',
+            headers={'User-Agent': USERAGENT,
+                     'Cookie':NOADMIN_COOKIE
+                     }
+            )
+        for i in range(len(max(the_page_lines,gold_page_lines))):
+            self.assertEqual(the_page_lines[i],gold_page_lines[i])
+        # see 25 at a time in contests page
+        (the_page_lines, gold_page_lines) = get_comparison(
+            SITE+'contests?i=0','basics010b.html',
+            headers={'User-Agent': USERAGENT,
+                     'Cookie':NOADMIN_COOKIE
+                     }
+            )
+        for i in range(len(max(the_page_lines,gold_page_lines))):
+            self.assertEqual(the_page_lines[i],gold_page_lines[i])
+        # see 25 at a time in contests page
+        (the_page_lines, gold_page_lines) = get_comparison(
+            SITE+'contests?i=25','basics010c.html',
+            headers={'User-Agent': USERAGENT,
+                     'Cookie':NOADMIN_COOKIE
+                     }
+            )
+        for i in range(len(max(the_page_lines,gold_page_lines))):
+            self.assertEqual(the_page_lines[i],gold_page_lines[i])
+        # see 25 at a time in contests page
+        (the_page_lines, gold_page_lines) = get_comparison(
+            SITE+'contests?i=50','basics010d.html',
+            headers={'User-Agent': USERAGENT,
+                     'Cookie':NOADMIN_COOKIE
+                     }
+            )
+        for i in range(len(max(the_page_lines,gold_page_lines))):
+            self.assertEqual(the_page_lines[i],gold_page_lines[i])
+        # see 25 at a time in contests page
+        (the_page_lines, gold_page_lines) = get_comparison(
+            SITE+'contests?i=75','basics010e.html',
+            headers={'User-Agent': USERAGENT,
+                     'Cookie':NOADMIN_COOKIE
+                     }
+            )
+        for i in range(len(max(the_page_lines,gold_page_lines))):
+            self.assertEqual(the_page_lines[i],gold_page_lines[i])
+        
         
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 if __name__ == "__main__":
