@@ -701,6 +701,46 @@ class FinishAnyContests(webapp.RequestHandler):
     self.response.out.write('Done')
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# GET /admin/do_that_thing
+# - only admin allowed via app.yaml
+# meant to be a special one-time call to fixup some database issue
+class DoThatThing(webapp.RequestHandler):
+  def get(self):
+    logging.info('DoThatThing called')
+    self.response.headers['Content-Type'] = 'text/plain'
+    if 0:
+      # example--make an old contest private
+      the_owner_nickname = 'Mr Predictr'
+      the_stock_symbol   = 'NVDA'
+      the_close_date     = datetime_module.date(2009,11,6)
+      new_hashphrase     = 'longhexvaluehere'
+      new_salt           = 'someseedhere'
+      new_private        = True
+      #
+      the_owner = db.GqlQuery(
+        "SELECT * FROM MyUser WHERE nickname = :1",
+        the_owner_nickname
+        ).fetch(1)
+      the_stock = db.GqlQuery(
+        "SELECT * FROM Stock WHERE symbol = :1",
+        the_stock_symbol
+        ).fetch(1)
+      contests_query = db.GqlQuery(
+        "SELECT * FROM Contest WHERE owner = :1 AND stock = :2 AND close_date = :3",
+        the_owner[0],
+        the_stock[0],
+        the_close_date
+        ).fetch(1)
+      contest = contests_query[0]
+      contest.hashphrase = new_hashphrase
+      contest.salt       = new_salt
+      contest.private    = new_private
+      contest.put()
+    self.response.out.write('Done\n')
+
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # GET catchall for any page not otherwise handled
 class NotFoundPageHandler(webapp.RequestHandler):
   def get(self):
@@ -731,6 +771,7 @@ application = webapp.WSGIApplication(
     (r'/contest/(.*)',        HandleContest),       # GET contest detail
     (r'/user/(.*)',           HandleUser),          # GET/POST user attributes
     ( '/admin/finish_any',    FinishAnyContests),   # GET finish contests
+    ( '/admin/do_that_thing', DoThatThing),         # GET something special
     ( '/.*',                  NotFoundPageHandler), # 404 Error
     ],
   debug=True)
