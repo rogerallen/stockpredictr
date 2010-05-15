@@ -1,5 +1,25 @@
+# stockpredictr.py
+#
+# Copyright (C) 2009,2010 Roger Allen (rallen@gmail.com)
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+# 02110-1301, USA.
+
 """
-stockpredictr.py - code for the stockpredictr google web app.
+stockpredictr.py - main code for handling the http://stockpredictr.appspot.com/
+website via google's app engine system.
 """
 import cgi
 import os
@@ -122,7 +142,7 @@ class Eastern_tzinfo(datetime_module.tzinfo):
     else:
       return "EDT"
 # this was from the example, but it doesn't work
-# XXX eastern_time_zone = utc_time.astimezone(Eastern_tzinfo())
+# eastern_time_zone = utc_time.astimezone(Eastern_tzinfo())
 eastern_tz = Eastern_tzinfo()
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -271,12 +291,12 @@ class HandleRoot(webapp.RequestHandler):
       "SELECT * FROM Contest " +
       "WHERE close_date >= :1 " +
       "ORDER BY close_date ASC", today)
-    open_contests = open_contests_query.fetch(25) # XXX get next 25?
+    open_contests = open_contests_query.fetch(25)
     closed_contests_query = db.GqlQuery(
       "SELECT * FROM Contest " +
       "WHERE close_date < :1 " +
       "ORDER BY close_date DESC", today)
-    closed_contests = closed_contests_query.fetch(25) # XXX get next 25?
+    closed_contests = closed_contests_query.fetch(25)
     (logged_in_flag, login_url, login_url_linktext) = get_login_url_info(self)
     cur_user = get_my_current_user()
 
@@ -424,7 +444,7 @@ class HandleContest(webapp.RequestHandler):
       if authorized_to_view:
         prediction_query = db.GqlQuery("SELECT * FROM Prediction WHERE contest = :1",
                                        contest)
-        predictions = prediction_query.fetch(100) # xxx multiple pages?
+        predictions = prediction_query.fetch(100) # TODO(issue 7) multiple pages?
 
         # create a list that can get the stock price inserted
         faux_predictions = []
@@ -619,12 +639,12 @@ class HandleContests(webapp.RequestHandler):
     cur_index = get_contest_index(self.request.get('i'))
     contests_query = db.GqlQuery(
       "SELECT * FROM Contest ORDER BY close_date DESC")
-    # TODO eventual bugfix: offset must be less than 1000
+    # TODO(issue 7) eventual bugfix: offset must be less than 1000
     contests = contests_query.fetch(contest_count,cur_index)
     later_index = max(0,cur_index-contest_count)
     later_contests_flag = later_index < cur_index
     earlier_index = cur_index+len(contests)
-    # TODO this isn't perfect
+    # TODO(issue 7) this isn't perfect
     earlier_contests_flag = earlier_index == cur_index+contest_count
     template_values = {
       'cur_user':              cur_user,
@@ -651,7 +671,7 @@ class HandleUser(webapp.RequestHandler):
       (logged_in_flag, login_url, login_url_linktext) = get_login_url_info(self)
       the_user = MyUser.get_by_id(long(user_id))
       logging.info("HandleUser/%d GET" % int(user_id))
-      # TODO user privacy
+      # TODO - user privacy
       try:
         authorized_to_view = the_user.user == cur_user.user or users.is_current_user_admin()
         authorized_to_edit = the_user.user == cur_user.user
