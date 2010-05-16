@@ -765,7 +765,7 @@ class FinishAnyContests(webapp.RequestHandler):
 # - only admin allowed via app.yaml
 # meant to be a special one-time call to fixup some database issue
 class DoThatThing(webapp.RequestHandler):
-  def get(self):
+  def get(self):                                      # pragma: no cover
     logging.info('DoThatThing called')
     self.response.headers['Content-Type'] = 'text/plain'
     if 0:

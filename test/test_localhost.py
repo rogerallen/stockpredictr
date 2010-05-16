@@ -206,8 +206,7 @@ class TestBasics(unittest.TestCase):
         
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 if __name__ == "__main__":
-    print "You better have google app engine running."
-    print "You need to start from a clear config, too"
+    print "Expecting clear-config app-engine already active..."
     if len(sys.argv) > 1 and 'gild' in sys.argv:
         print "GILD MODE ON.  Writing files to the 'lead' directory."
         GILD=True
