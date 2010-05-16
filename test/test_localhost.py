@@ -142,6 +142,37 @@ class TestBasics(unittest.TestCase):
         for i in range(len(max(the_page_lines,gold_page_lines))):
             self.assertEqual(the_page_lines[i],gold_page_lines[i])
 
+    def test008BadUserUrl(self):
+        (the_page_lines, gold_page_lines) = get_comparison(
+            SITE+'user/1a3x','basics008.html',
+            headers={'User-Agent': USERAGENT,
+                     'Cookie':NOADMIN_COOKIE
+                     }
+            )
+        for i in range(len(max(the_page_lines,gold_page_lines))):
+            self.assertEqual(the_page_lines[i],gold_page_lines[i])
+
+    def test009BadContestUrl(self):
+        (the_page_lines, gold_page_lines) = get_comparison(
+            SITE+'contest/1w2','basics009.html',
+            headers={'User-Agent': USERAGENT,
+                     'Cookie':NOADMIN_COOKIE
+                     }
+            )
+        for i in range(len(max(the_page_lines,gold_page_lines))):
+            self.assertEqual(the_page_lines[i],gold_page_lines[i])
+
+    def test00aMissingUrl(self):
+        self.assertRaises(urllib2.HTTPError,
+                          get_comparison,
+                          SITE+'gobbledygook',
+                          'basics00a.html',
+                          None,
+                          {'User-Agent': USERAGENT,
+                           'Cookie':NOADMIN_COOKIE
+                           }
+                          )
+
     def test010AddLotsOfTests(self):
         # add a gob of contests
         for month in [ '10', '11', '12' ]:
@@ -198,6 +229,27 @@ class TestBasics(unittest.TestCase):
             SITE+'contests?i=75','basics010e.html',
             headers={'User-Agent': USERAGENT,
                      'Cookie':NOADMIN_COOKIE
+                     }
+            )
+        for i in range(len(max(the_page_lines,gold_page_lines))):
+            self.assertEqual(the_page_lines[i],gold_page_lines[i])
+
+    def test020FinishContestsFail(self):
+        self.assertRaises(urllib2.HTTPError,
+                          get_comparison,
+                          SITE+'admin/finish_any',
+                          'basics020.html',
+                          None,
+                          {'User-Agent': USERAGENT,
+                           'Cookie':NOADMIN_COOKIE
+                           }
+                          )
+
+    def test021FinishContests(self):
+        (the_page_lines, gold_page_lines) = get_comparison(
+            SITE+'admin/finish_any','basics021.html',
+            headers={'User-Agent': USERAGENT,
+                     'Cookie':ADMIN_COOKIE
                      }
             )
         for i in range(len(max(the_page_lines,gold_page_lines))):
