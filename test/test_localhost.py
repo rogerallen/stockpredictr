@@ -12,6 +12,10 @@ SITE='http://localhost:8080/'
 # checked in
 USER_COOKIE  = 'dev_appserver_login="test@example.com:False:185804764220139124118"'
 USER2_COOKIE = 'dev_appserver_login="test2@example.com:False:185804764220139124118"'
+USER3_COOKIE = 'dev_appserver_login="test3@example.com:False:185804764220139124118"'
+USER4_COOKIE = 'dev_appserver_login="test4@example.com:False:185804764220139124118"'
+USER5_COOKIE = 'dev_appserver_login="test5@example.com:False:185804764220139124118"'
+USER6_COOKIE = 'dev_appserver_login="test6@example.com:False:185804764220139124118"'
 ADMIN_COOKIE = 'dev_appserver_login="test@example.com:True:185804764220139124118"'
 USERAGENT = "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.6; en-US; rv:1.9.2.3) Gecko/20100401 Firefox/3.6.3,gzip(gfe)"
 
@@ -400,6 +404,37 @@ class TestBasics(unittest.TestCase):
             headers={'User-Agent': USERAGENT,
                      'Cookie': USER2_COOKIE
                      }
+            )
+        for i in range(len(max(the_page_lines,gold_page_lines))):
+            self.assertEqual(the_page_lines[i],gold_page_lines[i])
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    def test03cContestCheckStockPrices(self):
+        fetch_url(
+            SITE+'contest/3',
+            values={'prediction':'13.0001'},
+            headers={'Cookie': USER2_COOKIE})
+        fetch_url(
+            SITE+'contest/3',
+            values={'prediction':'1'},
+            headers={'Cookie': USER3_COOKIE})
+        fetch_url(
+            SITE+'contest/3',
+            values={'prediction':'11.1'},
+            headers={'Cookie': USER4_COOKIE})
+        fetch_url(
+            SITE+'contest/3',
+            values={'prediction':'12.52'},
+            headers={'Cookie': USER5_COOKIE})
+        fetch_url(
+            SITE+'contest/3',
+            values={'prediction':'13.99999999999999'},
+            headers={'Cookie': USER6_COOKIE})
+        (the_page_lines, gold_page_lines) = get_comparison(
+            SITE+'contest/3',
+            page_name(self.id()),
+            values={'prediction':'13'},
+            headers={'Cookie': USER_COOKIE}
             )
         for i in range(len(max(the_page_lines,gold_page_lines))):
             self.assertEqual(the_page_lines[i],gold_page_lines[i])

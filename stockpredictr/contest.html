@@ -53,10 +53,10 @@
                         <b> WINNER! - 
                       {% endif %}
                       {% if prediction.is_price %}
-                        <b><i> {{ prediction.value }} - 
+                        <b><i> {{ prediction.value_str }} - 
                             {{ prediction.user_nickname }} </i></b>
                       {% else %}
-                        {{ prediction.value }} - 
+                        {{ prediction.value_str }} - 
                         <a href="/user/{{ prediction.user_id }}">
                           {{ prediction.user_nickname }}
                         </a>

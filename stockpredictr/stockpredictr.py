@@ -110,6 +110,7 @@ class FauxPrediction(object):
     self.user_nickname = user_nickname
     self.user_id       = user_id
     self.value         = value
+    self.value_str     = get_price_str(value)
     self.winner        = winner
     self.is_price      = is_price
     self.leader        = False
@@ -259,6 +260,14 @@ def get_stock_price_uncached(symbol):
     stock_price = "Unavailable"
   logging.info("stock price = %s" % (stock_price))
   return stock_price
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def get_price_str(f):
+  s = str(float(f))
+  (si,sf) = s.split('.')
+  while len(sf) < 2:
+    sf = sf + '0'
+  return '$'+si+'.'+sf
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # shared make_private routine
@@ -495,7 +504,7 @@ class HandleContest(webapp.RequestHandler):
       template_values = {
         'authorized':         authorized_to_view,
         'contest':            contest,
-        'stock_price':        stock_price,
+#        'stock_price':        stock_price,
         'predictions':        faux_predictions,
         'can_update_flag':    can_update_flag,
         'owner_flag':         owner_flag,

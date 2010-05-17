@@ -17,7 +17,7 @@
 	<li><a href="/">Home</a></li>
 	<li><a href="/about">About</a></li>
         
-          <li><a href="/user/5">Preferences</a></li>
+          <li><a href="/user/1">Preferences</a></li>
         
 	<li><a href="/_ah/login?continue=http%3A//localhost%3A8080/contest/3&action=Logout">Logout</a></li>
       </ul>
@@ -51,12 +51,47 @@
                       <li> 
                       
                       
-                        $13.00 - 
+                        $14.00 - 
+                        <a href="/user/15">
+                          test6@example.com
+                        </a>
+                      
+                      
+                      
+                    
+                      <li> 
+                      
+                      
+                        $13.0001 - 
                         <a href="/user/5">
                           test2@example.com
                         </a>
                       
                       
+                      
+                    
+                      <li> 
+                      
+                      
+                        $13.00 - 
+                        <a href="/user/1">
+                          mr test
+                        </a>
+                      
+                      
+                      
+                    
+                      <li> 
+                      
+                      
+                        $12.52 - 
+                        <a href="/user/13">
+                          test5@example.com
+                        </a>
+                      
+                      
+                      
+                        (Current Leader)
                       
                     
                       <li> 
@@ -71,14 +106,23 @@
                       <li> 
                       
                       
-                        $12.00 - 
-                        <a href="/user/1">
-                          mr test
+                        $11.10 - 
+                        <a href="/user/11">
+                          test4@example.com
                         </a>
                       
                       
                       
-                        (Current Leader)
+                    
+                      <li> 
+                      
+                      
+                        $1.00 - 
+                        <a href="/user/9">
+                          test3@example.com
+                        </a>
+                      
+                      
                       
                     
                   </ul>
@@ -106,6 +150,21 @@
 
               
 
+              
+                <div class="post">
+                  <h2 class="title">Finish The Contest</h2>
+                  <div class="entry">
+                    <p>You are the owner of the contest.  The system
+                      will automatically finalize a contest for you, but
+                      should something go awry, enter a value yourself.
+                      A negative value keeps the contest open.</p>
+                    
+                    <form action="/contest/3" method="post">
+                      Final Value: 
+                      <input type="text" name="final_value" value="-2.0">
+                    </form>
+                  </div> <!-- end #entry -->
+                </div> <!-- end #post -->
               
             
           </div> <!-- end #content -->
