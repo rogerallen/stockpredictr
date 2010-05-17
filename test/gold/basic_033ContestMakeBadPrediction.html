@@ -17,7 +17,7 @@
 	<li><a href="/">Home</a></li>
 	<li><a href="/about">About</a></li>
         
-          <li><a href="/user/1">Preferences</a></li>
+          <li><a href="/user/5">Preferences</a></li>
         
 	<li><a href="/_ah/login?continue=http%3A//localhost%3A8080/contest/3&action=Logout">Logout</a></li>
       </ul>
@@ -33,7 +33,7 @@
                       TEST -
                       2011-09-01</a> owned by 
                     <a href="/user/1">
-                      test@example.com</a>.
+                      mr test</a>.
                   </i></b></p>
                   <p>Enter the dollar amount below that you think the 
                     TEST stock price will be at the
@@ -51,10 +51,34 @@
                       <li> 
                       
                       
+                        13.0 - 
+                        <a href="/user/5">
+                          test2@example.com
+                        </a>
+                      
+                      
+                      
+                    
+                      <li> 
+                      
+                      
                         <b><i> 12.0625 - 
                             TEST Current Price </i></b>
                       
                       
+                      
+                    
+                      <li> 
+                      
+                      
+                        12.0 - 
+                        <a href="/user/1">
+                          mr test
+                        </a>
+                      
+                      
+                      
+                        (Current Leader)
                       
                     
                   </ul>
@@ -70,10 +94,14 @@
                       <p>Enter your prediction here.  You may update it until the
                         contest is closed</p>
                       
+                      <div class="post">
+                        <div class="error"><b>ERROR: There was an error with your prediction.</b></div>
+                      </div>         
+                      
                       <form action="/contest/3" method="post">
                         Prediction: 
                         <input type="text" name="prediction" 
-                               value= >
+                               value=1xz3 >
                       </form>
                       
                     
@@ -82,21 +110,6 @@
 
               
 
-              
-                <div class="post">
-                  <h2 class="title">Finish The Contest</h2>
-                  <div class="entry">
-                    <p>You are the owner of the contest.  The system
-                      will automatically finalize a contest for you, but
-                      should something go awry, enter a value yourself.
-                      A negative value keeps the contest open.</p>
-                    
-                    <form action="/contest/3" method="post">
-                      Final Value: 
-                      <input type="text" name="final_value" value="-1.0">
-                    </form>
-                  </div> <!-- end #entry -->
-                </div> <!-- end #post -->
               
             
           </div> <!-- end #content -->

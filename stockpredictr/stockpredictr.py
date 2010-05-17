@@ -362,7 +362,7 @@ class HandleRoot(webapp.RequestHandler):
                form_private    = self.request.get('private'),
                form_passphrase = self.request.get('passphrase'),
                )
-    except:
+    except: # pragma: no cover
       logging.exception("CreateContest Error")
       self.get(error_flag      = True,
                error_message   = "There was an error.  Sorry I can't be more specific.",
@@ -612,7 +612,7 @@ class HandleContest(webapp.RequestHandler):
                    error_message="Your passphrase did not match.",
                    form_passphrase=passphrase
                    )
-    except:
+    except: # pragma: no cover
       logging.exception("AuthorizeContest Error")
       self.get(contest_id,
                passphrase_error_flag=True,
@@ -840,6 +840,6 @@ application = webapp.WSGIApplication(
 def main():
   run_wsgi_app(application)
 
-if __name__ == "__main__":
+if __name__ == "__main__": # pragma: no cover
   main()
 

@@ -1,6 +1,6 @@
 <html>
   <head>
-    <title>Stockpredictr Contest #3</title>
+    <title>Stockpredictr Contest #4</title>
     <link type="text/css" rel="stylesheet" href="/stylesheets/republic/style.css" />
   </head>
 
@@ -17,9 +17,9 @@
 	<li><a href="/">Home</a></li>
 	<li><a href="/about">About</a></li>
         
-          <li><a href="/user/1">Preferences</a></li>
+          <li><a href="/user/5">Preferences</a></li>
         
-	<li><a href="/_ah/login?continue=http%3A//localhost%3A8080/contest/3&action=Logout">Logout</a></li>
+	<li><a href="/_ah/login?continue=http%3A//localhost%3A8080/contest/4&action=Logout">Logout</a></li>
       </ul>
     </div> <!-- end #menu -->
     <div id="page">
@@ -29,18 +29,18 @@
             
               <div class="post">
                 <div class="entry">
-                  <p><b><i>Contest <a href="/contest/3">
+                  <p><b><i>Contest <a href="/contest/4">
                       TEST -
-                      2011-09-01</a> owned by 
+                      2011-09-02</a> owned by 
                     <a href="/user/1">
-                      test@example.com</a>.
+                      mr test</a>.
                   </i></b></p>
                   <p>Enter the dollar amount below that you think the 
                     TEST stock price will be at the
-                    market close on 2011-09-01.  The
+                    market close on 2011-09-02.  The
                     contest will remain open and you can change your
                     guess until the market opens on 
-                    2011-09-01.</p>
+                    2011-09-02.</p>
                 </div>
               </div>
               <div class="post">
@@ -70,7 +70,7 @@
                       <p>Enter your prediction here.  You may update it until the
                         contest is closed</p>
                       
-                      <form action="/contest/3" method="post">
+                      <form action="/contest/4" method="post">
                         Prediction: 
                         <input type="text" name="prediction" 
                                value= >
@@ -82,21 +82,6 @@
 
               
 
-              
-                <div class="post">
-                  <h2 class="title">Finish The Contest</h2>
-                  <div class="entry">
-                    <p>You are the owner of the contest.  The system
-                      will automatically finalize a contest for you, but
-                      should something go awry, enter a value yourself.
-                      A negative value keeps the contest open.</p>
-                    
-                    <form action="/contest/3" method="post">
-                      Final Value: 
-                      <input type="text" name="final_value" value="-1.0">
-                    </form>
-                  </div> <!-- end #entry -->
-                </div> <!-- end #post -->
               
             
           </div> <!-- end #content -->
