@@ -392,6 +392,19 @@ class TestBasics(unittest.TestCase):
             self.assertEqual(the_page_lines[i],gold_page_lines[i])
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    def test03bContestPrivateChangePrediction(self):
+        (the_page_lines, gold_page_lines) = get_comparison(
+            SITE+'contest/4',
+            page_name(self.id()),
+            values={'prediction':'12.5'},
+            headers={'User-Agent': USERAGENT,
+                     'Cookie': USER2_COOKIE
+                     }
+            )
+        for i in range(len(max(the_page_lines,gold_page_lines))):
+            self.assertEqual(the_page_lines[i],gold_page_lines[i])
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def test040MissingUrl(self):
         self.assertRaises(urllib2.HTTPError,
                           get_comparison,
