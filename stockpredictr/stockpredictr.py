@@ -224,6 +224,19 @@ def get_stock_from_symbol(symbol):
     stock = stocks[0]
   return stock
 
+def market_open():
+  """hours are 9:30 - 4:30 to make sure market is settled"""
+  now = datetime_module.datetime.now(eastern_tz)
+  open_time = datetime_module.datetime(now.year, now.month, now.day,
+                                       9, 30, 0, 0, eastern_tz)
+  close_time = datetime_module.datetime(now.year, now.month, now.day,
+                                        16, 30, 0, 0, eastern_tz)
+  if now.weekday() < 5 and open_time < now < close_time:
+    #logging.info("market opened")
+    return True
+  #logging.info("market closed")
+  return False
+
 STOCK_CACHE_SECONDS = 60 # Update every minute, at most
 def get_stock_price(symbol):
   """get stock price and cache the result"""
@@ -236,11 +249,15 @@ def get_stock_price(symbol):
   #logging.info("now "+str(now))
   #logging.info("dt  "+str(dt))
   #logging.info("d   "+str(datetime.timedelta(0,STOCK_CACHE_SECONDS,0)))
-  if dt > datetime_module.timedelta(0,STOCK_CACHE_SECONDS,0):
+  if dt > datetime_module.timedelta(0,STOCK_CACHE_SECONDS,0) and market_open():
     logging.info("going to get stock price...")
-    stock_price = get_stock_price_uncached(symbol)
-    stock.recent_price = stock_price
-    stock.put()
+    try:
+      stock_price = get_stock_price_uncached(symbol)
+      stock.recent_price = stock_price
+      stock.put()
+    except urlfetch.DownloadError:
+      logging.exception("GetStockPrice DownloadError. Returning cached value")
+      stock_price = stock.recent_price
   else:
     logging.info("returning cached stock price")
     stock_price = stock.recent_price
