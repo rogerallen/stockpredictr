@@ -8,16 +8,18 @@ import sys
 GILD=False
 # global for the sitename
 SITE='http://localhost:8080/'
-# TODO these may only work for me.  prob should be in config file, not
-# checked in
-USER_COOKIE  = 'dev_appserver_login="test@example.com:False:185804764220139124118"'
-USER2_COOKIE = 'dev_appserver_login="test2@example.com:False:185804764220139124118"'
-USER3_COOKIE = 'dev_appserver_login="test3@example.com:False:185804764220139124118"'
-USER4_COOKIE = 'dev_appserver_login="test4@example.com:False:185804764220139124118"'
-USER5_COOKIE = 'dev_appserver_login="test5@example.com:False:185804764220139124118"'
-USER6_COOKIE = 'dev_appserver_login="test6@example.com:False:185804764220139124118"'
+
+# TODO this ID may only work for me.  prob should be in config file
+COOKIE_ID    = '185804764220139124118'
 ADMIN_COOKIE = 'dev_appserver_login="test@example.com:True:185804764220139124118"'
 USERAGENT = "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.6; en-US; rv:1.9.2.3) Gecko/20100401 Firefox/3.6.3,gzip(gfe)"
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def user_cookie(index=None):
+    istr=""
+    if index:
+        istr=str(index)
+    return 'dev_appserver_login="test'+istr+'@example.com:False:185804764220139124118"'
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def get_comparison(url, gold_file_name, values=None, headers={}):
@@ -84,7 +86,7 @@ class TestBasics(unittest.TestCase):
             SITE,
             page_name(self.id()),
             headers={'User-Agent': USERAGENT,
-                     'Cookie':USER_COOKIE
+                     'Cookie':user_cookie()
                      }
             )
         for i in range(len(max(the_page_lines,gold_page_lines))):
@@ -96,7 +98,7 @@ class TestBasics(unittest.TestCase):
             SITE,
             page_name(self.id()),
             values={'symbol': 'nxxx'},
-            headers={'Cookie':USER_COOKIE}
+            headers={'Cookie':user_cookie()}
             )
         for i in range(len(max(the_page_lines,gold_page_lines))):
             self.assertEqual(the_page_lines[i],gold_page_lines[i])
@@ -114,7 +116,7 @@ class TestBasics(unittest.TestCase):
                     'private':    '',
                     'passphrase': ''
                     },
-            headers={'Cookie':USER_COOKIE}
+            headers={'Cookie':user_cookie()}
             )
         for i in range(len(max(the_page_lines,gold_page_lines))):
             self.assertEqual(the_page_lines[i],gold_page_lines[i])
@@ -131,7 +133,7 @@ class TestBasics(unittest.TestCase):
                     'private':    '',
                     'passphrase': ''
                     },
-            headers={'Cookie':USER_COOKIE}
+            headers={'Cookie':user_cookie()}
             )
         for i in range(len(max(the_page_lines,gold_page_lines))):
             self.assertEqual(the_page_lines[i],gold_page_lines[i])
@@ -148,7 +150,7 @@ class TestBasics(unittest.TestCase):
                     'private':    '',
                     'passphrase': ''
                     },
-            headers={'Cookie':USER_COOKIE}
+            headers={'Cookie':user_cookie()}
             )
         for i in range(len(max(the_page_lines,gold_page_lines))):
             self.assertEqual(the_page_lines[i],gold_page_lines[i])
@@ -165,7 +167,7 @@ class TestBasics(unittest.TestCase):
                     'private':    '1',
                     'passphrase': 'password'
                     },
-            headers={'Cookie':USER_COOKIE}
+            headers={'Cookie':user_cookie()}
             )
         for i in range(len(max(the_page_lines,gold_page_lines))):
             self.assertEqual(the_page_lines[i],gold_page_lines[i])
@@ -185,7 +187,7 @@ class TestBasics(unittest.TestCase):
             SITE+'user/1',
             page_name(self.id()),
             headers={'User-Agent': USERAGENT,
-                     'Cookie':USER_COOKIE
+                     'Cookie':user_cookie()
                      }
             )
         for i in range(len(max(the_page_lines,gold_page_lines))):
@@ -197,7 +199,7 @@ class TestBasics(unittest.TestCase):
             SITE+'user/1a3x',
             page_name(self.id()),
             headers={'User-Agent': USERAGENT,
-                     'Cookie':USER_COOKIE
+                     'Cookie':user_cookie()
                      }
             )
         for i in range(len(max(the_page_lines,gold_page_lines))):
@@ -209,7 +211,7 @@ class TestBasics(unittest.TestCase):
             SITE+'user/1',
             page_name(self.id()),
             headers={'User-Agent': USERAGENT,
-                     'Cookie':USER2_COOKIE
+                     'Cookie':user_cookie(2)
                      }
             )
         for i in range(len(max(the_page_lines,gold_page_lines))):
@@ -222,7 +224,7 @@ class TestBasics(unittest.TestCase):
             page_name(self.id()),
             values={'nickname': 'must fail'},
             headers={'User-Agent': USERAGENT,
-                     'Cookie':USER2_COOKIE
+                     'Cookie':user_cookie(2)
                      }
             )
         for i in range(len(max(the_page_lines,gold_page_lines))):
@@ -235,7 +237,7 @@ class TestBasics(unittest.TestCase):
             page_name(self.id()),
             values={'nickname': 'mr test'},
             headers={'User-Agent': USERAGENT,
-                     'Cookie':USER_COOKIE
+                     'Cookie':user_cookie()
                      }
             )
         for i in range(len(max(the_page_lines,gold_page_lines))):
@@ -248,7 +250,7 @@ class TestBasics(unittest.TestCase):
             page_name(self.id()),
             values={'nickname': 'duh'},
             headers={'User-Agent': USERAGENT,
-                     'Cookie':USER_COOKIE
+                     'Cookie':user_cookie()
                      }
             )
         for i in range(len(max(the_page_lines,gold_page_lines))):
@@ -260,7 +262,7 @@ class TestBasics(unittest.TestCase):
             SITE+'contest/1w2',
             page_name(self.id()),
             headers={'User-Agent': USERAGENT,
-                     'Cookie':USER_COOKIE
+                     'Cookie':user_cookie()
                      }
             )
         for i in range(len(max(the_page_lines,gold_page_lines))):
@@ -273,7 +275,7 @@ class TestBasics(unittest.TestCase):
             page_name(self.id()),
             values={'prediction':'12'},
             headers={'User-Agent': USERAGENT,
-                     'Cookie':USER_COOKIE
+                     'Cookie':user_cookie()
                      }
             )
         for i in range(len(max(the_page_lines,gold_page_lines))):
@@ -286,7 +288,7 @@ class TestBasics(unittest.TestCase):
             page_name(self.id()),
             values={'prediction':'13'},
             headers={'User-Agent': USERAGENT,
-                     'Cookie': USER2_COOKIE
+                     'Cookie': user_cookie(2)
                      }
             )
         for i in range(len(max(the_page_lines,gold_page_lines))):
@@ -299,7 +301,7 @@ class TestBasics(unittest.TestCase):
             page_name(self.id()),
             values={'prediction':'1xz3'},
             headers={'User-Agent': USERAGENT,
-                     'Cookie': USER2_COOKIE
+                     'Cookie': user_cookie(2)
                      }
             )
         for i in range(len(max(the_page_lines,gold_page_lines))):
@@ -312,7 +314,7 @@ class TestBasics(unittest.TestCase):
             page_name(self.id()),
             values={'final_value':'12.0625'},
             headers={'User-Agent': USERAGENT,
-                     'Cookie': USER_COOKIE
+                     'Cookie': user_cookie()
                      }
             )
         for i in range(len(max(the_page_lines,gold_page_lines))):
@@ -325,7 +327,7 @@ class TestBasics(unittest.TestCase):
             page_name(self.id()),
             values={'final_value':'1x2.0z625'},
             headers={'User-Agent': USERAGENT,
-                     'Cookie': USER_COOKIE
+                     'Cookie': user_cookie()
                      }
             )
         for i in range(len(max(the_page_lines,gold_page_lines))):
@@ -338,7 +340,7 @@ class TestBasics(unittest.TestCase):
             page_name(self.id()),
             values={'final_value':'-2'},
             headers={'User-Agent': USERAGENT,
-                     'Cookie': USER_COOKIE
+                     'Cookie': user_cookie()
                      }
             )
         for i in range(len(max(the_page_lines,gold_page_lines))):
@@ -350,7 +352,7 @@ class TestBasics(unittest.TestCase):
             SITE+'contest/4',
             page_name(self.id()),
             headers={'User-Agent': USERAGENT,
-                     'Cookie':USER2_COOKIE
+                     'Cookie':user_cookie(2)
                      }
             )
         for i in range(len(max(the_page_lines,gold_page_lines))):
@@ -363,7 +365,7 @@ class TestBasics(unittest.TestCase):
             page_name(self.id()),
             values={'passphrase':'blahblah'},
             headers={'User-Agent': USERAGENT,
-                     'Cookie':USER2_COOKIE
+                     'Cookie':user_cookie(2)
                      }
             )
         for i in range(len(max(the_page_lines,gold_page_lines))):
@@ -376,7 +378,7 @@ class TestBasics(unittest.TestCase):
             page_name(self.id()),
             values={'passphrase':'password'},
             headers={'User-Agent': USERAGENT,
-                     'Cookie':USER2_COOKIE
+                     'Cookie':user_cookie(2)
                      }
             )
         for i in range(len(max(the_page_lines,gold_page_lines))):
@@ -389,7 +391,7 @@ class TestBasics(unittest.TestCase):
             page_name(self.id()),
             values={'prediction':'13'},
             headers={'User-Agent': USERAGENT,
-                     'Cookie': USER2_COOKIE
+                     'Cookie': user_cookie(2)
                      }
             )
         for i in range(len(max(the_page_lines,gold_page_lines))):
@@ -402,7 +404,7 @@ class TestBasics(unittest.TestCase):
             page_name(self.id()),
             values={'prediction':'12.5'},
             headers={'User-Agent': USERAGENT,
-                     'Cookie': USER2_COOKIE
+                     'Cookie': user_cookie(2)
                      }
             )
         for i in range(len(max(the_page_lines,gold_page_lines))):
@@ -410,31 +412,16 @@ class TestBasics(unittest.TestCase):
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def test03cContestCheckStockPrices(self):
-        fetch_url(
-            SITE+'contest/3',
-            values={'prediction':'13.0001'},
-            headers={'Cookie': USER2_COOKIE})
-        fetch_url(
-            SITE+'contest/3',
-            values={'prediction':'1'},
-            headers={'Cookie': USER3_COOKIE})
-        fetch_url(
-            SITE+'contest/3',
-            values={'prediction':'11.1'},
-            headers={'Cookie': USER4_COOKIE})
-        fetch_url(
-            SITE+'contest/3',
-            values={'prediction':'12.52'},
-            headers={'Cookie': USER5_COOKIE})
-        fetch_url(
-            SITE+'contest/3',
-            values={'prediction':'13.99999999999999'},
-            headers={'Cookie': USER6_COOKIE})
+        for (i,v) in enumerate(['13.0001','1','11.1','12.52','13.99999999999999']):
+            fetch_url(
+                SITE+'contest/3',
+                values={'prediction':v},
+                headers={'Cookie': user_cookie(i+2)})
         (the_page_lines, gold_page_lines) = get_comparison(
             SITE+'contest/3',
             page_name(self.id()),
             values={'prediction':'13'},
-            headers={'Cookie': USER_COOKIE}
+            headers={'Cookie': user_cookie()}
             )
         for i in range(len(max(the_page_lines,gold_page_lines))):
             self.assertEqual(the_page_lines[i],gold_page_lines[i])
@@ -447,7 +434,7 @@ class TestBasics(unittest.TestCase):
                           page_name(self.id()),
                           None,
                           {'User-Agent': USERAGENT,
-                           'Cookie':USER_COOKIE
+                           'Cookie':user_cookie()
                            }
                           )
 
@@ -459,7 +446,7 @@ class TestBasics(unittest.TestCase):
                           page_name(self.id()),
                           None,
                           {'User-Agent': USERAGENT,
-                           'Cookie':USER_COOKIE
+                           'Cookie':user_cookie()
                            }
                           )
 
@@ -481,7 +468,7 @@ class TestBasics(unittest.TestCase):
             SITE+'contests?i=x3',
             page_name(self.id()),
             headers={'User-Agent': USERAGENT,
-                     'Cookie':USER_COOKIE
+                     'Cookie':user_cookie()
                      }
             )
         for i in range(len(max(the_page_lines,gold_page_lines))):
@@ -506,14 +493,14 @@ class TestLong(unittest.TestCase):
                             'private':    '',
                             'passphrase': ''
                             },
-                    headers={'Cookie':USER_COOKIE}
+                    headers={'Cookie':user_cookie()}
                     )
         # see only 25 on homepage
         (the_page_lines, gold_page_lines) = get_comparison(
             SITE,
             page_name(self.id(),'A'),
             headers={'User-Agent': USERAGENT,
-                     'Cookie':USER_COOKIE
+                     'Cookie':user_cookie()
                      }
             )
         for i in range(len(max(the_page_lines,gold_page_lines))):
@@ -523,7 +510,7 @@ class TestLong(unittest.TestCase):
             SITE+'contests?i=0',
             page_name(self.id(),'B'),
             headers={'User-Agent': USERAGENT,
-                     'Cookie':USER_COOKIE
+                     'Cookie':user_cookie()
                      }
             )
         for i in range(len(max(the_page_lines,gold_page_lines))):
@@ -533,7 +520,7 @@ class TestLong(unittest.TestCase):
             SITE+'contests?i=25',
             page_name(self.id(),'C'),
             headers={'User-Agent': USERAGENT,
-                     'Cookie':USER_COOKIE
+                     'Cookie':user_cookie()
                      }
             )
         for i in range(len(max(the_page_lines,gold_page_lines))):
@@ -543,7 +530,7 @@ class TestLong(unittest.TestCase):
             SITE+'contests?i=50',
             page_name(self.id(),'D'),
             headers={'User-Agent': USERAGENT,
-                     'Cookie':USER_COOKIE
+                     'Cookie':user_cookie()
                      }
             )
         for i in range(len(max(the_page_lines,gold_page_lines))):
@@ -553,12 +540,43 @@ class TestLong(unittest.TestCase):
             SITE+'contests?i=75',
             page_name(self.id(),'E'),
             headers={'User-Agent': USERAGENT,
-                     'Cookie':USER_COOKIE
+                     'Cookie':user_cookie()
                      }
             )
         for i in range(len(max(the_page_lines,gold_page_lines))):
             self.assertEqual(the_page_lines[i],gold_page_lines[i])
         
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    def test001ContestAddLotsOfPredictions(self):
+        for (i,v) in enumerate(range(55)):
+            fetch_url(
+                SITE+'contest/3',
+                values={'prediction': 10.0+v/10.0 },
+                headers={'Cookie':    user_cookie(i) })
+        (the_page_lines, gold_page_lines) = get_comparison(
+            SITE+'contest/3',
+            page_name(self.id(),'A'),
+            headers={'Cookie': user_cookie()}
+            )
+        for i in range(len(max(the_page_lines,gold_page_lines))):
+            self.assertEqual(the_page_lines[i],gold_page_lines[i])
+
+        (the_page_lines, gold_page_lines) = get_comparison(
+            SITE+'contest/3?i=25',
+            page_name(self.id(),'B'),
+            headers={'Cookie': user_cookie()}
+            )
+        for i in range(len(max(the_page_lines,gold_page_lines))):
+            self.assertEqual(the_page_lines[i],gold_page_lines[i])
+
+        (the_page_lines, gold_page_lines) = get_comparison(
+            SITE+'contest/3?i=50',
+            page_name(self.id(),'C'),
+            headers={'Cookie': user_cookie()}
+            )
+        for i in range(len(max(the_page_lines,gold_page_lines))):
+            self.assertEqual(the_page_lines[i],gold_page_lines[i])
+
         
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 if __name__ == "__main__":

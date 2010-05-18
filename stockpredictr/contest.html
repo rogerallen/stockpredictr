@@ -46,6 +46,9 @@
               <div class="post">
                 <h2 class="title">Contest Entries</h2>
                 <div class="entry">
+                  {% if prev_predictions_flag %}
+                    <p><a href="/contest/{{contest.key.id}}?i={{prev_index}}">Higher Values...</a></p>
+                  {% endif %}
                   <ul>
                     {% for prediction in predictions %}
                       <li> 
@@ -69,6 +72,9 @@
                       {% endif %}
                     {% endfor %}
                   </ul>
+                  {% if next_predictions_flag %}
+                    <p><a href="/contest/{{contest.key.id}}?i={{next_index}}">Lower Values...</a></p>
+                  {% endif %}
                 </div> <!-- end #entry -->
               </div> <!-- end #post -->
 
@@ -96,7 +102,7 @@
                       time. Come back at 4PM Eastern time to see who won!</p>
                       {% endif %}
                     {% else %}
-                      <b><i><a href="{{ login_url }}">Login</a> to enter.</i><b>
+                      <b><i><a href="{{ login_url }}">Login</a> to enter.</i></b>
                     {% endif %}
                   </div> <!-- end #entry -->
                 </div> <!-- end #post -->

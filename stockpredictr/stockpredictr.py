@@ -36,6 +36,10 @@ from google.appengine.ext.webapp.util import run_wsgi_app
 from google.appengine.api import urlfetch
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# config
+G_LIST_SIZE=25
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # some global strings
 g_footer = """
 <p>Copyright (c) 2009-2010 Stockpredictr. All rights reserved.
@@ -300,12 +304,12 @@ class HandleRoot(webapp.RequestHandler):
       "SELECT * FROM Contest " +
       "WHERE close_date >= :1 " +
       "ORDER BY close_date ASC", today)
-    open_contests = open_contests_query.fetch(25)
+    open_contests = open_contests_query.fetch(G_LIST_SIZE)
     closed_contests_query = db.GqlQuery(
       "SELECT * FROM Contest " +
       "WHERE close_date < :1 " +
       "ORDER BY close_date DESC", today)
-    closed_contests = closed_contests_query.fetch(25)
+    closed_contests = closed_contests_query.fetch(G_LIST_SIZE)
     (logged_in_flag, login_url, login_url_linktext) = get_login_url_info(self)
     cur_user = get_my_current_user()
 
@@ -450,10 +454,31 @@ class HandleContest(webapp.RequestHandler):
         authorized_to_view = users.is_current_user_admin() or owner_flag or in_authorized_list
         logging.info("private: allowed=%s" % (authorized_to_view))
 
+      prediction_count = G_LIST_SIZE
+      cur_index = arg2int(self.request.get('i'))
       if authorized_to_view:
-        prediction_query = db.GqlQuery("SELECT * FROM Prediction WHERE contest = :1",
+        prediction_query = db.GqlQuery("SELECT * FROM Prediction WHERE contest = :1 ORDER BY value DESC",
                                        contest)
-        predictions = prediction_query.fetch(100) # TODO(issue 7) multiple pages?
+        # TODO(issue 7) eventual bugfix: offset must be less than 1000
+        predictions = prediction_query.fetch(prediction_count,cur_index)
+        prev_index = max(0,cur_index-prediction_count)
+        prev_predictions_flag = prev_index < cur_index
+        next_index = cur_index+len(predictions)
+        # TODO(issue 7) this isn't perfect
+        next_predictions_flag = next_index == cur_index+prediction_count
+
+        # help figure out current leader.  get predictions just outside the fetch
+        # set huge values to make sure they never win
+        prediction_prev = FauxPrediction(
+            'prev', -1, -1e6, False, False
+            )
+        if prev_predictions_flag:
+          prediction_prev = prediction_query.fetch(1,cur_index-1)[0]
+        prediction_next = FauxPrediction(
+            'next', -1, 1e6, False, False
+            )
+        if next_predictions_flag:
+          prediction_next = prediction_query.fetch(1,cur_index+prediction_count)[0]
 
         # create a list that can get the stock price inserted
         faux_predictions = []
@@ -479,13 +504,15 @@ class HandleContest(webapp.RequestHandler):
           stock_price = contest.final_value
 
         # find the current leader(s)
+        # include next values to allow them to be picked as leader
+        # but not be displyed in main list
         if open_flag:
           min_pred = 100000.0
-          for prediction in faux_predictions:
-            delta = abs(prediction.value - stock_price) 
+          for prediction in [prediction_prev]+faux_predictions+[prediction_next]:
+            delta = abs(prediction.value - stock_price)
             if min_pred > delta:
               min_pred = delta
-          for prediction in faux_predictions:
+          for prediction in [prediction_prev]+faux_predictions+[prediction_next]:
             delta = abs(prediction.value - stock_price)
             if min_pred == delta:
               prediction.leader = True
@@ -497,31 +524,38 @@ class HandleContest(webapp.RequestHandler):
         faux_predictions.sort(key=lambda p: p.value)
         faux_predictions.reverse()
       else:
-        faux_predictions     = []
-        can_update_flag = False
-        open_flag       = False
+        faux_predictions         = []
+        can_update_flag          = False
+        open_flag                = False
+        prev_index              = max(0,cur_index-prediction_count)
+        prev_predictions_flag   = False
+        next_index            = cur_index+prediction_count
+        next_predictions_flag = False
         
       template_values = {
-        'authorized':         authorized_to_view,
-        'contest':            contest,
-#        'stock_price':        stock_price,
-        'predictions':        faux_predictions,
-        'can_update_flag':    can_update_flag,
-        'owner_flag':         owner_flag,
-        'open_flag':          open_flag,
-        'cur_user':           cur_user,
-        'login_url':          login_url,
-        'login_url_linktext': login_url_linktext,
-        'logged_in_flag':     logged_in_flag,
-        'prediction_error_flag': prediction_error_flag,
-        'final_value_error_flag': final_value_error_flag,
-        'passphrase_error_flag': passphrase_error_flag,
-        'error_message':      error_message,
-        'form_prediction':    form_prediction,
-        'form_final_value':   form_final_value,
-        'form_passphrase':    form_passphrase,
-        'g_footer':           g_footer,
-        'g_welcome_warning':  g_welcome_warning,
+        'authorized':              authorized_to_view,
+        'contest':                 contest,
+        'predictions':             faux_predictions,
+        'can_update_flag':         can_update_flag,
+        'owner_flag':              owner_flag,
+        'open_flag':               open_flag,
+        'cur_user':                cur_user,
+        'login_url':               login_url,
+        'login_url_linktext':      login_url_linktext,
+        'logged_in_flag':          logged_in_flag,
+        'prediction_error_flag':   prediction_error_flag,
+        'final_value_error_flag':  final_value_error_flag,
+        'passphrase_error_flag':   passphrase_error_flag,
+        'error_message':           error_message,
+        'form_prediction':         form_prediction,
+        'form_final_value':        form_final_value,
+        'form_passphrase':         form_passphrase,
+        'prev_predictions_flag':   prev_predictions_flag,
+        'next_predictions_flag':   next_predictions_flag,
+        'prev_index':              prev_index,
+        'next_index':              next_index,
+        'g_footer':                g_footer,
+        'g_welcome_warning':       g_welcome_warning,
         }
     
       path = os.path.join(os.path.dirname(__file__), 'contest.html')
@@ -631,7 +665,8 @@ class HandleContest(webapp.RequestHandler):
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def get_contest_index(s):
+def arg2int(s):
+  """try converting a value to an integer.  any failure returns 0"""
   try:
     i = int(s)
   except ValueError:
@@ -644,8 +679,8 @@ class HandleContests(webapp.RequestHandler):
   def get(self):
     (logged_in_flag, login_url, login_url_linktext) = get_login_url_info(self)
     cur_user = get_my_current_user()
-    contest_count = 25
-    cur_index = get_contest_index(self.request.get('i'))
+    contest_count = G_LIST_SIZE
+    cur_index = arg2int(self.request.get('i'))
     contests_query = db.GqlQuery(
       "SELECT * FROM Contest ORDER BY close_date DESC")
     # TODO(issue 7) eventual bugfix: offset must be less than 1000
