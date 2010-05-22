@@ -13,11 +13,13 @@
 COVERAGE=env PYTHONPATH=~/lib/python2.5/site-packages ~/bin/coverage-2.5
 
 # start webserver with a clear cache
-APPSERVER=/usr/local/bin/dev_appserver.py --clear_datastore ../stockpredictr
+APPSERVER=/usr/local/bin/dev_appserver.py --admin_console_server= --port=8080 --clear_datastore ../stockpredictr
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # main entry points
 test:	start_webserver run_test kill_webserver
+
+quick:	start_webserver run_quick_test kill_webserver
 
 gild:	start_webserver run_gild kill_webserver
 
@@ -31,6 +33,10 @@ clean:
 run_test:
 	@echo "Starting test..."
 	@./test_localhost.py
+
+run_quick_test:
+	@echo "Starting test..."
+	@./test_localhost.py TestBasics
 
 run_gild:
 	@echo "Starting test+gild..."

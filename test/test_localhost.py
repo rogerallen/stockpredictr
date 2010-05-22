@@ -6,20 +6,33 @@ import sys
 
 # global switch to write gilded files
 GILD=False
-# global for the sitename
+# global for the sitename.  put in config file someday
 SITE='http://localhost:8080/'
-
 # TODO this ID may only work for me.  prob should be in config file
 COOKIE_ID    = '185804764220139124118'
-ADMIN_COOKIE = 'dev_appserver_login="test@example.com:True:185804764220139124118"'
+
+# not sure this is necessary
 USERAGENT = "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.6; en-US; rv:1.9.2.3) Gecko/20100401 Firefox/3.6.3,gzip(gfe)"
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def user_cookie(index=None):
+def login_cookie(email,admin_flag,cookie_id):
+    """ return string in this format
+      dev_appserver_login="test@example.com:True:185804764220139124118"
+    """
+    login_str = email+':'
+    login_str += str(admin_flag)+':'
+    login_str += cookie_id
+    cookie_str = 'dev_appserver_login="'+login_str+'"'
+    return cookie_str
+
+def user_cookie(index=None,admin_flag=False):
     istr=""
     if index:
         istr=str(index)
-    return 'dev_appserver_login="test'+istr+'@example.com:False:185804764220139124118"'
+    return login_cookie('test'+istr+'@example.com',admin_flag,COOKIE_ID)
+
+def admin_cookie(index=None):
+    return user_cookie(index,True)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def get_comparison(url, gold_file_name, values=None, headers={}):
@@ -456,7 +469,7 @@ class TestBasics(unittest.TestCase):
             SITE+'admin/finish_any',
             page_name(self.id()),
             headers={'User-Agent': USERAGENT,
-                     'Cookie':ADMIN_COOKIE
+                     'Cookie':admin_cookie()
                      }
             )
         for i in range(len(max(the_page_lines,gold_page_lines))):
