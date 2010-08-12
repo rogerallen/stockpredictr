@@ -54,7 +54,7 @@ start_webserver:
 kill_webserver:
 	@echo "giving the server some time to settle..."
 	@sleep 5   # give server time to settle
-	@kill -15 `ps |grep dev_appserver.py |grep -v grep | cut -d\  -f1`
+	@kill -15 `ps |grep dev_appserver.py |grep -v grep | cut -c 1-6`
 
 .PHONY: test gild run_test run_gild report start_webserver kill_webserver clean
 

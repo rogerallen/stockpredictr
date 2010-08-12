@@ -5,11 +5,11 @@ import urllib2
 import sys
 
 # global switch to write gilded files
-GILD=False
+GILD = False
 # global for the sitename.  put in config file someday
-SITE='http://localhost:8080/'
+SITE = 'http://localhost:8080/'
 # TODO this ID may only work for me.  prob should be in config file
-COOKIE_ID    = '185804764220139124118'
+COOKIE_ID = '185804764220139124118'
 
 # not sure this is necessary
 USERAGENT = "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.6; en-US; rv:1.9.2.3) Gecko/20100401 Firefox/3.6.3,gzip(gfe)"

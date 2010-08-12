@@ -17,6 +17,9 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 # 02110-1301, USA.
 
+
+# TODO consider http://www.joeyb.org/blog/2009/07/20/google-app-engine-project-template and do some reformatting.
+
 """
 stockpredictr.py - main code for handling the http://stockpredictr.appspot.com/
 website via google's app engine system.
@@ -36,10 +39,9 @@ from google.appengine.ext.webapp.util import run_wsgi_app
 from google.appengine.api import urlfetch
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# config
+# config stuff - TODO get a proper config file going.  it can handle multi-line strings
 G_LIST_SIZE=25
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # some global strings
 g_footer = """
 <p>Copyright (c) 2009-2010 Stockpredictr. All rights reserved.
