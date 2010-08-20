@@ -1,4 +1,17 @@
 #!/usr/bin/env python
+#
+# Tests for stockpredictr appengine code.
+
+# Basic idea is to save 'golden' versions of the website that have
+# been inspected to be correct.
+
+# When you expect the code to not change the output, run tests
+# normally & they diff 'current' vs. 'gold'.  No diffs == pass.
+
+# When the website output changes, these changes are 'gilded' by
+# putting new pages into the 'lead' directory, inspecting them and
+# when they are correct, copying them to the 'gold' directory.
+
 import unittest
 import urllib
 import urllib2

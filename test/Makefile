@@ -9,11 +9,19 @@
 #     and copy over new & better pages to gold for checkin.
 #
 
-# this will need customization for others...
-COVERAGE=env PYTHONPATH=~/lib/python2.5/site-packages ~/bin/coverage-2.5
+# path for coverage tool.  See http://nedbatchelder.com/code/coverage/
+COVERAGE=coverage
 
 # start webserver with a clear cache
-APPSERVER=/usr/local/bin/dev_appserver.py --admin_console_server= --port=8080 --clear_datastore ../stockpredictr
+APPSERVER=/usr/local/bin/dev_appserver.py \
+  --admin_console_server= \
+  --port=8080 \
+  --clear_datastore \
+  ../stockpredictr
+
+# we need to wait for the server to start
+SERVER_START_ALLOWANCE=15
+SERVER_STOP_ALLOWANCE=5
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # main entry points
@@ -30,6 +38,7 @@ clean:
 	rm -rf .coverage htmlcov lead/* server_output.txt
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# detailed entry points
 run_test:
 	@echo "Starting test..."
 	@./test_localhost.py
@@ -47,13 +56,15 @@ htmlcov/index.html: .coverage
 	@${COVERAGE} html ../stockpredictr/stockpredictr.py
 
 start_webserver:
+	@/bin/echo -n "Starting Server: "
+	@date
 	@${COVERAGE} run --branch ${APPSERVER} >& server_output.txt &
-	@echo "giving the server some time to start..."
-	@sleep 5   # give server time to start
+	@echo "giving the server "${SERVER_START_ALLOWANCE}" seconds to start..."
+	@sleep ${SERVER_START_ALLOWANCE}
 
 kill_webserver:
-	@echo "giving the server some time to settle..."
-	@sleep 5   # give server time to settle
+	@echo "giving the server "${SERVER_STOP_ALLOWANCE}" seconds to settle..."
+	@sleep ${SERVER_STOP_ALLOWANCE}
 	@kill -15 `ps |grep dev_appserver.py |grep -v grep | cut -c 1-6`
 
 .PHONY: test gild run_test run_gild report start_webserver kill_webserver clean
