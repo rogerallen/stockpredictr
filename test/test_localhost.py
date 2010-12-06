@@ -16,6 +16,8 @@ import unittest
 import urllib
 import urllib2
 import sys
+sys.path.append("../stockpredictr")
+from stockpredictr_config import G_LIST_SIZE
 
 # global switch to write gilded files
 GILD = False
@@ -451,6 +453,21 @@ class TestBasics(unittest.TestCase):
             )
         for i in range(len(max(the_page_lines,gold_page_lines))):
             self.assertEqual(the_page_lines[i],gold_page_lines[i])
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    def test03dContestExactlyOnePageOfPredictions(self):
+        num_pred = G_LIST_SIZE
+        for (i,v) in enumerate(range(num_pred)):
+            fetch_url(
+                SITE+'contest/3',
+                values={'prediction': 10.0+v/10.0 },
+                headers={'Cookie':    user_cookie(i) })
+        (the_page_lines, gold_page_lines) = get_comparison(
+            SITE+'contest/3',
+            page_name(self.id()),
+            headers={'Cookie': user_cookie()}
+            )
+            
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def test040MissingUrl(self):

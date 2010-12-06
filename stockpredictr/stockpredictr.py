@@ -38,26 +38,7 @@ from google.appengine.ext.webapp import template
 from google.appengine.ext.webapp.util import run_wsgi_app
 from google.appengine.api import urlfetch
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# config stuff - TODO get a proper config file going.  it can handle multi-line strings
-G_LIST_SIZE=25
-
-# some global strings
-g_footer = """
-<p>Copyright (c) 2009-2010 Stockpredictr. All rights reserved.
-Design by <a href="http://www.freecsstemplates.org/">Free CSS Templates</a>.</p>
-"""
-
-g_welcome_warning = """<h2>Welcome</h2>
-<p>Welcome to Stockpredictr, the site for stock
-prediction contests.</p>
-<h2>Warning</h2>
-<p>This site is being actively developed and the software is
-beta-quality.  Please report any issues to the
-<a href="http://code.google.com/p/stockpredictr/issues">the development
-site</a>.  Thanks!</p>
-"""
-
+from stockpredictr_config import G_LIST_SIZE,g_footer,g_welcome_warning
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # our databases
@@ -483,9 +464,9 @@ class HandleContest(webapp.RequestHandler):
         prev_index = max(0,cur_index-prediction_count)
         prev_predictions_flag = prev_index < cur_index
         next_index = cur_index+len(predictions)
-        # TODO(issue 7) this isn't perfect
+        # if there is a next_prediction, it will be at cur_index+pred_count
+        # later, we verify there actually is one here... (bugfix)
         next_predictions_flag = next_index == cur_index+prediction_count
-
         # help figure out current leader.  get predictions just outside the fetch
         # set huge values to make sure they never win
         prediction_prev = FauxPrediction(
@@ -497,7 +478,11 @@ class HandleContest(webapp.RequestHandler):
             'next', -1, 1e6, False, False
             )
         if next_predictions_flag:
-          prediction_next = prediction_query.fetch(1,cur_index+prediction_count)[0]
+          try:
+            prediction_next = prediction_query.fetch(1,cur_index+prediction_count)[0]
+          except IndexError:
+            # there is no next prediction, so reset this flag & keep the FauxPrediction
+            next_prediction_flag = False
 
         # create a list that can get the stock price inserted
         faux_predictions = []

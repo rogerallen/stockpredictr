@@ -1,6 +1,6 @@
 #!/usr/bin/make
 # Usage:
-#   make        - 'make test'
+#   make        - same as 'make test'
 #   make test   - start server, run localhost tests
 #   make report - grab coverage
 #
@@ -20,7 +20,7 @@ APPSERVER=/usr/local/bin/dev_appserver.py \
   ../stockpredictr
 
 # we need to wait for the server to start
-SERVER_START_ALLOWANCE=15
+SERVER_START_ALLOWANCE=5
 SERVER_STOP_ALLOWANCE=5
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -65,6 +65,7 @@ start_webserver:
 kill_webserver:
 	@echo "giving the server "${SERVER_STOP_ALLOWANCE}" seconds to settle..."
 	@sleep ${SERVER_STOP_ALLOWANCE}
+	@echo kill -15 `ps |grep dev_appserver.py |grep -v grep | cut -c 1-6`
 	@kill -15 `ps |grep dev_appserver.py |grep -v grep | cut -c 1-6`
 
 .PHONY: test gild run_test run_gild report start_webserver kill_webserver clean
