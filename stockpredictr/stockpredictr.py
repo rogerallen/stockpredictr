@@ -461,6 +461,10 @@ class HandleContest(webapp.RequestHandler):
                                        contest)
         # TODO(issue 7) eventual bugfix: offset must be less than 1000
         predictions = prediction_query.fetch(prediction_count,cur_index)
+        # "prev"/"next" here is referring to indices, but the flag eventually
+        # refers to the values of the predictions which is reverse sorted
+        # so "prev"=="higher" and "next"=="lower".  A bit confusing, so be
+        # careful.
         prev_index = max(0,cur_index-prediction_count)
         prev_predictions_flag = prev_index < cur_index
         next_index = cur_index+len(predictions)
@@ -482,7 +486,7 @@ class HandleContest(webapp.RequestHandler):
             prediction_next = prediction_query.fetch(1,cur_index+prediction_count)[0]
           except IndexError:
             # there is no next prediction, so reset this flag & keep the FauxPrediction
-            next_prediction_flag = False
+            next_predictions_flag = False
 
         # create a list that can get the stock price inserted
         faux_predictions = []
@@ -528,11 +532,11 @@ class HandleContest(webapp.RequestHandler):
         faux_predictions.sort(key=lambda p: p.value)
         faux_predictions.reverse()
       else:
-        faux_predictions         = []
-        can_update_flag          = False
-        open_flag                = False
-        prev_index              = max(0,cur_index-prediction_count)
-        prev_predictions_flag   = False
+        faux_predictions      = []
+        can_update_flag       = False
+        open_flag             = False
+        prev_index            = max(0,cur_index-prediction_count)
+        prev_predictions_flag = False
         next_index            = cur_index+prediction_count
         next_predictions_flag = False
         

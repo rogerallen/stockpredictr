@@ -467,7 +467,8 @@ class TestBasics(unittest.TestCase):
             page_name(self.id()),
             headers={'Cookie': user_cookie()}
             )
-            
+        for i in range(len(max(the_page_lines,gold_page_lines))):
+            self.assertEqual(the_page_lines[i],gold_page_lines[i])
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def test040MissingUrl(self):
