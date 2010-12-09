@@ -25,9 +25,9 @@ SERVER_STOP_ALLOWANCE=5
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # main entry points
-test:	start_webserver run_test kill_webserver
+test:	start_webserver run_test kill_webserver stdoutcov
 
-quick:	start_webserver run_quick_test kill_webserver
+quick:	start_webserver run_quick_test kill_webserver stdoutcov
 
 gild:	start_webserver run_gild kill_webserver
 
@@ -53,7 +53,10 @@ run_gild:
 
 htmlcov/index.html: .coverage
 	@echo "Creating coverage html report"
-	@${COVERAGE} html ../stockpredictr/stockpredictr.py
+	@${COVERAGE} html ../stockpredictr/*.py
+
+stdoutcov:
+	@${COVERAGE} report ../stockpredictr/*.py
 
 start_webserver:
 	@/bin/echo -n "Starting Server: "

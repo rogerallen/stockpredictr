@@ -1,4 +1,4 @@
-# stockpredictr.py
+# stockpredictr_config.py
 #
 # Copyright (C) 2009,2010 Roger Allen (rallen@gmail.com)
 #
@@ -18,10 +18,8 @@
 # 02110-1301, USA.
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# config stuff - TODO get a proper config file going.  it can handle multi-line strings
 G_LIST_SIZE=25
 
-# some global strings
 g_footer = """
 <p>Copyright (c) 2009-2010 Stockpredictr. All rights reserved.
 Design by <a href="http://www.freecsstemplates.org/">Free CSS Templates</a>.</p>
