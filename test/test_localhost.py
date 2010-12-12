@@ -201,6 +201,39 @@ class TestBasics(unittest.TestCase):
             self.assertEqual(the_page_lines[i],gold_page_lines[i])
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    def test007AddContestNoLogin(self):
+        (the_page_lines, gold_page_lines) = get_comparison(
+            SITE,
+            page_name(self.id()),
+            values={'symbol':     'test',
+                    'year':       '2011',
+                    'month':      '9',
+                    'day':        '1',
+                    'private':    '',
+                    'passphrase': ''
+                    },
+            )
+        for i in range(len(max(the_page_lines,gold_page_lines))):
+            self.assertEqual(the_page_lines[i],gold_page_lines[i])
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    def test008RootAddContestOnWeekend(self):
+        (the_page_lines, gold_page_lines) = get_comparison(
+            SITE,
+            page_name(self.id()),
+            values={'symbol':     'test',
+                    'year':       '2011',
+                    'month':      '9',
+                    'day':        '3',
+                    'private':    '',
+                    'passphrase': ''
+                    },
+            headers={'Cookie':user_cookie()}
+            )
+        for i in range(len(max(the_page_lines,gold_page_lines))):
+            self.assertEqual(the_page_lines[i],gold_page_lines[i])
+        
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def test010AboutNoLogin(self):
         (the_page_lines, gold_page_lines) = get_comparison(
             SITE+'about',
@@ -241,6 +274,15 @@ class TestBasics(unittest.TestCase):
             headers={'User-Agent': USERAGENT,
                      'Cookie':user_cookie(2)
                      }
+            )
+        for i in range(len(max(the_page_lines,gold_page_lines))):
+            self.assertEqual(the_page_lines[i],gold_page_lines[i])
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    def test022aUserNoLogin(self):
+        (the_page_lines, gold_page_lines) = get_comparison(
+            SITE+'user/1',
+            page_name(self.id()),
             )
         for i in range(len(max(the_page_lines,gold_page_lines))):
             self.assertEqual(the_page_lines[i],gold_page_lines[i])
@@ -297,6 +339,15 @@ class TestBasics(unittest.TestCase):
             self.assertEqual(the_page_lines[i],gold_page_lines[i])
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    def test0301ContestNoUser(self):
+        (the_page_lines, gold_page_lines) = get_comparison(
+            SITE+'contest/3',
+            page_name(self.id()),
+            )
+        for i in range(len(max(the_page_lines,gold_page_lines))):
+            self.assertEqual(the_page_lines[i],gold_page_lines[i])
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def test031ContestMakePrediction(self):
         (the_page_lines, gold_page_lines) = get_comparison(
             SITE+'contest/3',
@@ -331,6 +382,16 @@ class TestBasics(unittest.TestCase):
             headers={'User-Agent': USERAGENT,
                      'Cookie': user_cookie(2)
                      }
+            )
+        for i in range(len(max(the_page_lines,gold_page_lines))):
+            self.assertEqual(the_page_lines[i],gold_page_lines[i])
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    def test0330ContestMakeNoUserPrediction(self):
+        (the_page_lines, gold_page_lines) = get_comparison(
+            SITE+'contest/3',
+            page_name(self.id()),
+            values={'prediction':'13'},
             )
         for i in range(len(max(the_page_lines,gold_page_lines))):
             self.assertEqual(the_page_lines[i],gold_page_lines[i])
@@ -395,6 +456,16 @@ class TestBasics(unittest.TestCase):
             headers={'User-Agent': USERAGENT,
                      'Cookie':user_cookie(2)
                      }
+            )
+        for i in range(len(max(the_page_lines,gold_page_lines))):
+            self.assertEqual(the_page_lines[i],gold_page_lines[i])
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    def test038aContestPrivateNoUser(self):
+        (the_page_lines, gold_page_lines) = get_comparison(
+            SITE+'contest/4',
+            page_name(self.id()),
+            values={'passphrase':'password'},
             )
         for i in range(len(max(the_page_lines,gold_page_lines))):
             self.assertEqual(the_page_lines[i],gold_page_lines[i])

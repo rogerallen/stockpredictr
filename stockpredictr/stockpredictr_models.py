@@ -181,6 +181,29 @@ def make_private(contest, private, passphrase):
     contest.hashphrase = None
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def finish_contest(contest, final_value):
+  """
+  Finalize a contest's final_value and prediction winner
+  """
+  logging.info("Closing contest %s %s" % ( contest.owner, contest.stock ))
+  contest.final_value = final_value
+  contest.put()
+  prediction_query = db.GqlQuery("SELECT * FROM Prediction WHERE contest = :1", contest)
+  min_pred = 100000.0
+  for prediction in prediction_query:
+    prediction.winner = False
+    prediction.put()
+    delta = abs(prediction.value - contest.final_value) 
+    if min_pred > delta:
+      min_pred = delta
+  if contest.final_value >= 0.0:
+    for prediction in prediction_query:
+      delta = abs(prediction.value - contest.final_value) 
+      if min_pred == delta:
+        prediction.winner = True
+        prediction.put()
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 class Prediction(db.Model):
   """
   Table of Predictions - one per user per contest.  updates allowed.

@@ -25,11 +25,11 @@ SERVER_STOP_ALLOWANCE=5
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # main entry points
-test:	start_webserver run_test kill_webserver stdoutcov
+test:	start_webserver start_wait run_test stop_wait kill_webserver stop_wait stdoutcov
 
-quick:	start_webserver run_quick_test kill_webserver stdoutcov
+quick:	start_webserver start_wait run_quick_test stop_wait kill_webserver stop_wait stdoutcov
 
-gild:	start_webserver run_gild kill_webserver
+gild:	start_webserver start_wait run_gild stop_wait kill_webserver
 
 report: htmlcov/index.html
 	@open htmlcov/index.html
@@ -62,14 +62,18 @@ start_webserver:
 	@/bin/echo -n "Starting Server: "
 	@date
 	@${COVERAGE} run --branch ${APPSERVER} >& server_output.txt &
+
+kill_webserver:
+	@echo kill -15 `ps |grep dev_appserver.py |grep -v grep | cut -c 1-6`
+	@kill -15 `ps |grep dev_appserver.py |grep -v grep | cut -c 1-6`
+
+start_wait:
 	@echo "giving the server "${SERVER_START_ALLOWANCE}" seconds to start..."
 	@sleep ${SERVER_START_ALLOWANCE}
 
-kill_webserver:
+stop_wait:
 	@echo "giving the server "${SERVER_STOP_ALLOWANCE}" seconds to settle..."
 	@sleep ${SERVER_STOP_ALLOWANCE}
-	@echo kill -15 `ps |grep dev_appserver.py |grep -v grep | cut -c 1-6`
-	@kill -15 `ps |grep dev_appserver.py |grep -v grep | cut -c 1-6`
 
 .PHONY: test gild run_test run_gild report start_webserver kill_webserver clean
 

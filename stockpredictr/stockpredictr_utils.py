@@ -81,20 +81,6 @@ def market_open():
           open_time < now < close_time)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# session utils
-def get_login_url_info(cls):
-  """return (logged_in_flag, login_url, login_url_linktext)."""
-  logged_in_flag = False
-  if users.get_current_user():
-    login_url = users.create_logout_url(cls.request.uri)
-    login_url_linktext = 'Logout'
-    logged_in_flag = True
-  else:
-    login_url = users.create_login_url(cls.request.uri)
-    login_url_linktext = 'Login'  
-  return (logged_in_flag, login_url, login_url_linktext)
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def myhash(s):
   """given a string, return a hexdigest hash.  string is normally
   a salted password"""
@@ -110,6 +96,15 @@ def get_price_str(f):
   while len(sf) < 2:
     sf = sf + '0'
   return '$'+si+'.'+sf
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def arg2int(s):
+  """try converting a value to an integer.  any failure returns 0"""
+  try:
+    i = int(s)
+  except ValueError:
+    i = 0
+  return i
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def template_path(s):
