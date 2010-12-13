@@ -128,7 +128,6 @@ class MyUser(db.Model):
   user     = db.UserProperty()
   authorized_contest_list = db.ListProperty(db.Key)
 
-# class method?  FIXME
 def get_my_current_user():
   """return the MyUser for the current_user, adding if necessary"""
   if users.get_current_user() == None:
@@ -150,7 +149,6 @@ def get_my_current_user():
     my_user = my_users[0]
   logging.info('get_my_current_user %s' % (my_user.nickname))
   return my_user
-
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 class Contest(db.Model):
@@ -226,4 +224,4 @@ class FauxPrediction(object):
     self.winner        = winner
     self.is_price      = is_price
     self.leader        = False
-    
+

@@ -174,7 +174,6 @@ class HandleContest(webapp.RequestHandler):
       if authorized_to_view:
         prediction_query = db.GqlQuery("SELECT * FROM Prediction WHERE contest = :1 ORDER BY value DESC",
                                        contest)
-        # TODO(issue 7) eventual bugfix: offset must be less than 1000
         predictions = prediction_query.fetch(prediction_count,cur_index)
         # "prev"/"next" here is referring to indices, but the flag eventually
         # refers to the values of the predictions which is reverse sorted
@@ -372,7 +371,6 @@ class HandleContest(webapp.RequestHandler):
                form_passphrase=passphrase
                )
 
-
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # GET /contests
 class HandleContests(webapp.RequestHandler):
@@ -382,13 +380,18 @@ class HandleContests(webapp.RequestHandler):
     cur_index = arg2int(self.request.get('i'))
     contests_query = db.GqlQuery(
       "SELECT * FROM Contest ORDER BY close_date DESC")
-    # TODO(issue 7) eventual bugfix: offset must be less than 1000
     contests = contests_query.fetch(contest_count,cur_index)
     later_index = max(0,cur_index-contest_count)
     later_contests_flag = later_index < cur_index
     earlier_index = cur_index+len(contests)
-    # TODO(issue 7) this isn't perfect
+    # there may be an earlier prediction, but we have to test to be sure
     earlier_contests_flag = earlier_index == cur_index+contest_count
+    if earlier_contests_flag:
+      try:
+        contest_earlier = contests_query.fetch(1,cur_index+contest_count)[0]
+      except IndexError:
+        # there is no earlier contest, so reset this flag
+        earlier_contests_flag = False
     template_values.update({
       'contests':              contests,
       'later_contests_flag':   later_contests_flag,
@@ -407,7 +410,6 @@ class HandleUser(webapp.RequestHandler):
       template_values = DefaultTemplate(self.request.uri)
       the_user = MyUser.get_by_id(long(user_id))
       logging.info("HandleUser/%d GET" % int(user_id))
-      # TODO - user privacy
       cur_user = template_values['cur_user']
       try:
         authorized_to_view = the_user.user == cur_user.user or users.is_current_user_admin()
@@ -520,8 +522,6 @@ class DoThatThing(webapp.RequestHandler):
       contest.private    = new_private
       contest.put()
     self.response.out.write('Done\n')
-
-
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # GET catchall for any page not otherwise handled
