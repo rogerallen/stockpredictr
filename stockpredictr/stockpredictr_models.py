@@ -89,10 +89,13 @@ def get_stock_price(symbol):
     logging.info("going to get stock price...")
     try:
       stock_price = get_stock_price_uncached(symbol)
-      stock.recent_price = stock_price
       stock.put()
+      stock.recent_price = stock_price
     except urlfetch.DownloadError:
       logging.exception("GetStockPrice DownloadError. Returning cached value")
+      stock_price = stock.recent_price
+    except db.BadValueError:
+      logging.exception("GetStockPrice BadValueError. Returning cached value")
       stock_price = stock.recent_price
   else:
     logging.info("returning cached stock price")
