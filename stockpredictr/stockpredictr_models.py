@@ -81,7 +81,11 @@ def get_stock_price(symbol):
   #logging.info("now "+str(now))
   #logging.info("dt  "+str(dt))
   #logging.info("d   "+str(datetime.timedelta(0,STOCK_CACHE_SECONDS,0)))
-  if dt > datetime_module.timedelta(0,STOCK_CACHE_SECONDS,0) and market_open():
+  if market_open():
+    N = 1  # one period during open
+  else:
+    N = 15 # 15x slower during close
+  if dt > datetime_module.timedelta(0,N*STOCK_CACHE_SECONDS,0):
     logging.info("going to get stock price...")
     try:
       stock_price = get_stock_price_uncached(symbol)
