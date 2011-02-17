@@ -33,7 +33,7 @@
         {% if cur_user %}
           <li><a href="/user/{{cur_user.key.id}}">Preferences</a></li>
         {% endif %}
-	<li><a href="{{ login_url }}">{{ login_url_linktext }}</a></li>
+	<li><a href="{% autoescape off %}{{ login_url }}{% endautoescape %}">{{ login_url_linktext }}</a></li>
       </ul>
     </div> <!-- end #menu -->
     <div id="page">
@@ -45,16 +45,16 @@
                 <div class="entry">
                   <p><b><i>Contest <a href="/contest/{{contest.key.id}}">
                       {{ contest.stock.symbol }} -
-                      {{ contest.close_date }}</a> owned by 
+                      {{ contest.close_date|date:"Y-m-d" }}</a> owned by 
                     <a href="/user/{{contest.owner.key.id}}">
                       {{ contest.owner.nickname }}</a>.
                   </i></b></p>
                   <p>Enter the dollar amount below that you think the 
                     {{ contest.stock.symbol }} stock price will be at the
-                    market close on {{ contest.close_date }}.  The
+                    market close on {{ contest.close_date|date:"Y-m-d" }}.  The
                     contest will remain open and you can change your
                     guess until the market opens on 
-                    {{ contest.close_date }}.</p>
+                    {{ contest.close_date|date:"Y-m-d" }}.</p>
                 </div>
               </div>
               <div class="post">
@@ -172,7 +172,7 @@
 	  <div id="sidebar">
 	    <ul>
 	      <li>&nbsp;</li>
-              <li> {{ g_welcome_warning }} </li>
+              <li>{% autoescape off %} {{ g_welcome_warning }} {% endautoescape %}</li>
 	    </ul>
 	  </div>
 	  <!-- end #sidebar -->
@@ -183,9 +183,9 @@
     </div> <!-- end #page -->
   </div> <!-- end #wrapper -->
 
-  <div id="footer">
+  <div id="footer">{% autoescape off %}
     {{ g_footer }}
-  </div> <!-- end #footer -->
+  {% endautoescape %}</div> <!-- end #footer -->
 
   </body>
 </html>

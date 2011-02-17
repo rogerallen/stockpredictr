@@ -33,7 +33,7 @@
         {% if cur_user %}
           <li><a href="/user/{{cur_user.key.id}}">Preferences</a></li>
         {% endif %}
-	<li><a href="{{ login_url }}">{{ login_url_linktext }}</a></li>
+	<li><a href="{% autoescape off %}{{ login_url }}{% endautoescape %}">{{ login_url_linktext }}</a></li>
       </ul>
     </div> <!-- end #menu -->
     <div id="page">
@@ -63,7 +63,7 @@
 
                   {% if error_flag %}
                   <div class="post">
-                    <div class="error"><b>ERROR: {{error_message}}</b></div>
+                    <div class="error"><b>ERROR: {% autoescape off %}{{error_message}}{% endautoescape %}</b></div>
                   </div>         
                   {% endif %}
                   <div id="search" class="entry">
@@ -116,7 +116,7 @@
                   {% for contest in open_contests %}
                     <li> <a href="contest/{{contest.key.id}}">
                         {{ contest.stock.symbol }} - 
-                        {{ contest.close_date }}</a> -
+                        {{ contest.close_date|date:"Y-m-d" }}</a> -
                         {% if contest.private %}
                           [private]
                         {% else %}
@@ -152,7 +152,7 @@
                   {% for contest in closed_contests %}
                     <li> <a href="contest/{{contest.key.id}}">
                         {{ contest.stock.symbol }} - 
-                        {{ contest.close_date }}</a> -
+                        {{ contest.close_date|date:"Y-m-d" }}</a> -
                         {% if contest.private %}
                           [private]
                         {% else %}
@@ -171,7 +171,7 @@
 	  <div id="sidebar">
 	    <ul>
 	      <li>&nbsp;</li>
-              <li> {{ g_welcome_warning }} </li>
+              <li>{% autoescape off %} {{ g_welcome_warning }} {% endautoescape %}</li>
 	    </ul>
 	  </div>
 	  <!-- end #sidebar -->
@@ -182,9 +182,9 @@
     </div> <!-- end #page -->
   </div> <!-- end #wrapper -->
 
-  <div id="footer">
+  <div id="footer">{% autoescape off %}
     {{ g_footer }}
-  </div> <!-- end #footer -->
+  {% endautoescape %}</div> <!-- end #footer -->
 
   </body>
 </html>
