@@ -10,7 +10,7 @@
 #
 
 # path for coverage tool.  See http://nedbatchelder.com/code/coverage/
-COVERAGE=env PYTHONPATH=~/lib/python2.6/site-packages coverage
+COVERAGE=env coverage
 
 # start webserver with a clear cache
 APPSERVER=/usr/local/bin/dev_appserver.py \
