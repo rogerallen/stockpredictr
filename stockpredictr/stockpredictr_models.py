@@ -106,14 +106,17 @@ def get_stock_price_uncached(symbol):
   # add 'TEST' short-circuit stock that is always $12.0625/share
   if symbol == 'TEST':
     return 12.0625
-  stock_price_url = "http://brivierestockquotes.appspot.com/?q=%s" % (symbol)
+  #stock_price_url = "http://brivierestockquotes.appspot.com/?q=%s" % (symbol)
+  stock_price_url = "http://finance.google.com/finance/info?client=ig&q=%s" % (symbol)
   stock_price_result = urlfetch.fetch(stock_price_url)
   if stock_price_result.status_code == 200:
-    tmp = stock_price_result.content.replace(',]',']')
+    #tmp = stock_price_result.content.replace(',]',']')
+    tmp = stock_price_result.content.replace('// ','')
     logging.info("stock response = %s" % (tmp))
     stock_data = simplejson.loads(tmp)
     if len(stock_data) > 0:
-      stock_price = float(stock_data[0]["price"])
+      #stock_price = float(stock_data[0]["price"])
+      stock_price = float(stock_data[0]["l"])
     else:
       stock_price = "Unknown"
   else:
