@@ -570,7 +570,6 @@ class TestBasics(unittest.TestCase):
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def test051FinishContests(self):
-        return # XXX fixme
         (the_page_lines, gold_page_lines) = get_comparison(
             SITE+'admin/finish_any',
             page_name(self.id()),
