@@ -2,6 +2,8 @@
   <head>
     <title>Stockpredictr Contest #{{contest.key.id}}</title>
     <link type="text/css" rel="stylesheet" href="/stylesheets/republic/style.css" />
+    <script src="/js/raphael-min.js"></script>
+    <script src="/js/stocknumline.js"></script>
     <script type="text/javascript">
       var _gaq = _gaq || [];
       _gaq.push(['_setAccount', 'UA-17958355-2']);
@@ -60,6 +62,7 @@
               <div class="post">
                 <h2 class="title">Contest Entries</h2>
                 <div class="entry">
+                  <div id="linegraph"></div>
                   {% if prev_predictions_flag %}
                     <p><a href="/contest/{{contest.key.id}}?i={{prev_index}}">Higher Values...</a></p>
                   {% endif %}
@@ -188,4 +191,16 @@
   {% endautoescape %}</div> <!-- end #footer -->
 
   </body>
+  <script type="text/javascript">
+    window.onload = function() { 
+      var width = 600; 
+      var height = 500;
+      paper = Raphael("linegraph",width,height); 
+      json = {% autoescape off %} {{ json_data }} {% endautoescape %};
+      var numline = new StockNumline();
+      if(json.hasOwnProperty("price")) {
+        numline.construct(paper,json,width,height); 
+      }
+    }
+  </script>
 </html>

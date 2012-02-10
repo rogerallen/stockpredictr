@@ -21,6 +21,7 @@ import datetime as datetime_module
 from google.appengine.ext import webapp
 from google.appengine.ext import db
 from google.appengine.ext.webapp import template
+from django.utils import simplejson
 
 from stockpredictr_config import *
 from stockpredictr_utils import *
@@ -204,10 +205,16 @@ class HandleContest(webapp.RequestHandler):
 
         # create a list that can get the stock price inserted
         faux_predictions = []
+        json_data = {}
+        json_data["predictions"] = []
         for p in predictions:
           faux_predictions.append(FauxPrediction(
             p.user.nickname, p.user.key().id(), p.value, p.winner,False
             ))
+          json_data["predictions"] = [{
+              'name': p.user.nickname,
+              'value': get_price_str(p.value)[1:] # drop '$'
+              }] + json_data["predictions"]
           
         # see if we should allow the contest to be updated
         now = get_market_time_now()
@@ -223,6 +230,11 @@ class HandleContest(webapp.RequestHandler):
         else:
           stock_name += " Final Price"
           stock_price = contest.final_value
+
+        json_data["price"] = { 
+          'name': contest.stock.symbol.replace(' ','\n'),
+          'value': get_price_str(stock_price)[1:] # drop '$'
+          }
 
         # find the current leader(s)
         # include next values to allow them to be picked as leader
@@ -244,6 +256,9 @@ class HandleContest(webapp.RequestHandler):
           ))
         faux_predictions.sort(key=lambda p: p.value)
         faux_predictions.reverse()
+
+        json_data = simplejson.dumps(json_data)
+
       else:
         faux_predictions      = []
         can_update_flag       = False
@@ -252,6 +267,7 @@ class HandleContest(webapp.RequestHandler):
         prev_predictions_flag = False
         next_index            = cur_index+prediction_count
         next_predictions_flag = False
+        json_data             = '{}'
         
       template_values.update({
         'authorized':              authorized_to_view,
@@ -271,6 +287,7 @@ class HandleContest(webapp.RequestHandler):
         'next_predictions_flag':   next_predictions_flag,
         'prev_index':              prev_index,
         'next_index':              next_index,
+        'json_data':               json_data,
         })
       self.response.out.write(template.render(template_path('contest.html'), template_values))
     except:
