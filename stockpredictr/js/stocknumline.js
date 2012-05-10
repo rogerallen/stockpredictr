@@ -44,8 +44,6 @@ Numline.prototype.set_minmax = function() {
     }
     this.value_min -= 0.5;
     this.value_max += 0.5;
-    console.log("Numline.value_min = "+this.value_min);
-    console.log("Numline.value_max = "+this.value_max);
 }
 
 Numline.prototype.construct_center_line = function() {
@@ -123,7 +121,6 @@ Datapoint.prototype.configure = function(paper,font) {
 }
 
 Datapoint.prototype.construct = function(label_x,label_y,value_x,value_y) {
-    //console.log("datapoint.construct("+label_x+","+label_y+","+value_x+","+value_y+");");
     if(this.location === LOCATION.RIGHT) {
         dp_str       = this.value+" "+this.name;
         dp_direction = 1;
@@ -156,7 +153,6 @@ Datapoint.prototype.construct = function(label_x,label_y,value_x,value_y) {
 }
 
 Datapoint.prototype.arrow = function(x1,y1,x2,y2,arrow1,arrow2) {
-    //console.log("arrow("+x1+","+y1+","+x2+","+y2+","+arrow1+","+arrow2+");");
     var dx = Math.abs(x2-x1);
     var path = [["M", x1, y1], ["C", x1+dx/2, y1, x2-dx/2, y2, x2, y2]];
     var curve = this.paper.path(path);
