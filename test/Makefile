@@ -5,7 +5,7 @@
 #   make report - grab coverage
 #
 #   make gild   - start server, run localhost tests, write output to lead dir
-#     after this, the expectation is that you will diff lead/gold dirs 
+#     after this, the expectation is that you will diff lead/gold dirs
 #     and copy over new & better pages to gold for checkin.
 #
 
@@ -14,9 +14,10 @@ COVERAGE=env coverage
 
 # start webserver with a clear cache
 APPSERVER=/usr/local/bin/dev_appserver.py \
-  --admin_console_server= \
+  --host=0.0.0.0 \
   --port=8080 \
-  --clear_datastore \
+  --clear_datastore=True \
+  --skip_sdk_update_check=True \
   ../stockpredictr
 
 # we need to wait for the server to start
@@ -28,6 +29,8 @@ SERVER_STOP_ALLOWANCE=5
 test:	start_webserver start_wait run_test stop_wait kill_webserver stop_wait stdoutcov
 
 quick:	start_webserver start_wait run_quick_test stop_wait kill_webserver stop_wait stdoutcov
+
+simple: start_webserver start_wait run_simple_test stop_wait kill_webserver stop_wait stdoutcov
 
 gild:	start_webserver start_wait run_gild stop_wait kill_webserver
 
@@ -46,6 +49,10 @@ run_test:
 run_quick_test:
 	@echo "Starting test..."
 	@./test_localhost.py TestBasics
+
+run_simple_test:
+	@echo "Starting test..."
+	@./test_localhost.py TestBasics.test000RootNoLogin TestBasics.test001RootWithLogin
 
 run_gild:
 	@echo "Starting test+gild..."
@@ -76,4 +83,3 @@ stop_wait:
 	@sleep ${SERVER_STOP_ALLOWANCE}
 
 .PHONY: test gild run_test run_gild report start_webserver kill_webserver clean
-
