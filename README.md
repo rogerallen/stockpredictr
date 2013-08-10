@@ -1,6 +1,6 @@
 stockpredictr
 =============
 
-stockpredictr.appspot.com code from https://code.google.com/p/stockpredictr
+http://stockpredictr.appspot.com code from https://code.google.com/p/stockpredictr
 
-_more to come, just getting started..._
+_Mre to come, just getting started on transferring from there to here._
