@@ -1,6 +1,6 @@
 <html>
   <head>
-    <title>Stockpredictr Contest #3</title>
+    <title>Stockpredictr Contest #5348024557502464</title>
     <link type="text/css" rel="stylesheet" href="/stylesheets/republic/style.css" />
     <script src="/js/raphael-min.js"></script>
     <script src="/js/stocknumline.js"></script>
@@ -33,7 +33,7 @@
 	<li><a href="/">Home</a></li>
 	<li><a href="/about">About</a></li>
         
-	<li><a href="/_ah/login?continue=http%3A//localhost%3A8080/contest/3">Login</a></li>
+	<li><a href="/_ah/login?continue=http%3A//localhost%3A8080/contest/5348024557502464">Login</a></li>
       </ul>
     </div> <!-- end #menu -->
     <div id="page">
@@ -43,10 +43,10 @@
             
               <div class="post">
                 <div class="entry">
-                  <p><b><i>Contest <a href="/contest/3">
+                  <p><b><i>Contest <a href="/contest/5348024557502464">
                       TEST -
                       2015-09-01</a> owned by 
-                    <a href="/user/1">
+                    <a href="/user/5066549580791808">
                       mr test</a>.
                   </i></b></p>
                   <p>Enter the dollar amount below that you think the 
@@ -83,7 +83,7 @@
                   <h2 class="title">Enter Your Prediction</h2>
                   <div class="entry">
                     
-                      <b><i><a href="/_ah/login?continue=http%3A//localhost%3A8080/contest/3">Login</a> to enter.</i></b>
+                      <b><i><a href="/_ah/login?continue=http%3A//localhost%3A8080/contest/5348024557502464">Login</a> to enter.</i></b>
                     
                   </div> <!-- end #entry -->
                 </div> <!-- end #post -->
@@ -129,7 +129,7 @@ Design by <a href="http://www.freecsstemplates.org/">Free CSS Templates</a>.</p>
       var width = 600; 
       var height = 500;
       paper = Raphael("linegraph",width,height); 
-      json =  {"price": {"name": "TEST", "value": "12.0625"}, "predictions": []} ;
+      json =  {"price": {"value": "12.0625", "name": "TEST"}, "predictions": []} ;
       var numline = new StockNumline();
       if(json.hasOwnProperty("price")) {
         numline.construct(paper,json,width,height); 

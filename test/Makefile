@@ -22,7 +22,7 @@ APPSERVER=/usr/local/bin/dev_appserver.py \
 
 # we need to wait for the server to start
 SERVER_START_ALLOWANCE=5
-SERVER_STOP_ALLOWANCE=5
+SERVER_STOP_ALLOWANCE=10
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # main entry points
@@ -68,7 +68,7 @@ stdoutcov:
 start_webserver:
 	@/bin/echo -n "Starting Server: "
 	@date
-	@${COVERAGE} run --branch ${APPSERVER} >& server_output.txt &
+	@${COVERAGE} run --omit=/Applications --source=../stockpredictr --branch ${APPSERVER} >& server_output.txt &
 
 kill_webserver:
 	@echo kill -15 `ps |grep dev_appserver.py |grep -v grep | cut -c 1-6`

@@ -1,6 +1,6 @@
 <html>
   <head>
-    <title>Stockpredictr Contest #4</title>
+    <title>Stockpredictr Contest #6473924464345088</title>
     <link type="text/css" rel="stylesheet" href="/stylesheets/republic/style.css" />
     <script src="/js/raphael-min.js"></script>
     <script src="/js/stocknumline.js"></script>
@@ -33,9 +33,9 @@
 	<li><a href="/">Home</a></li>
 	<li><a href="/about">About</a></li>
         
-          <li><a href="/user/1">Preferences</a></li>
+          <li><a href="/user/5066549580791808">Preferences</a></li>
         
-	<li><a href="/_ah/login?continue=http%3A//localhost%3A8080/contest/4&action=Logout">Logout</a></li>
+	<li><a href="/_ah/login?continue=http%3A//localhost%3A8080/contest/6473924464345088&action=logout">Logout</a></li>
       </ul>
     </div> <!-- end #menu -->
     <div id="page">
@@ -45,10 +45,10 @@
             
               <div class="post">
                 <div class="entry">
-                  <p><b><i>Contest <a href="/contest/4">
+                  <p><b><i>Contest <a href="/contest/6473924464345088">
                       TEST -
                       2015-09-02</a> owned by 
-                    <a href="/user/1">
+                    <a href="/user/5066549580791808">
                       test@example.com</a>.
                   </i></b></p>
                   <p>Enter the dollar amount below that you think the 
@@ -89,7 +89,7 @@
                       <p>Enter your prediction here.  You may update it until the
                         contest is closed</p>
                       
-                      <form action="/contest/4" method="post">
+                      <form action="/contest/6473924464345088" method="post">
                         Prediction: 
                         <input type="text" name="prediction" 
                                value= >
@@ -110,7 +110,7 @@
                       should something go awry, enter a value yourself.
                       A negative value keeps the contest open.</p>
                     
-                    <form action="/contest/4" method="post">
+                    <form action="/contest/6473924464345088" method="post">
                       Final Value: 
                       <input type="text" name="final_value" value="-1.0">
                     </form>
@@ -155,7 +155,7 @@ Design by <a href="http://www.freecsstemplates.org/">Free CSS Templates</a>.</p>
       var width = 600; 
       var height = 500;
       paper = Raphael("linegraph",width,height); 
-      json =  {"price": {"name": "TEST", "value": "12.0625"}, "predictions": []} ;
+      json =  {"predictions": [], "price": {"name": "TEST", "value": "12.0625"}} ;
       var numline = new StockNumline();
       if(json.hasOwnProperty("price")) {
         numline.construct(paper,json,width,height); 
