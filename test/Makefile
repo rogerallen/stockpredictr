@@ -22,7 +22,7 @@ APPSERVER=/usr/local/bin/dev_appserver.py \
 
 # we need to wait for the server to start
 SERVER_START_ALLOWANCE=5
-SERVER_STOP_ALLOWANCE=10
+SERVER_STOP_ALLOWANCE=5
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # main entry points
