@@ -1,6 +1,6 @@
 # stockpredictr_utils.py
 #
-# Copyright (C) 2009,2010 Roger Allen (rallen@gmail.com)
+# Copyright (C) 2009-2013 Roger Allen (rallen@gmail.com)
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -23,6 +23,7 @@ import datetime as datetime_module
 import random
 import hashlib
 from google.appengine.api import users
+from google.appengine.ext.webapp import template
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Time utils
@@ -31,7 +32,7 @@ class Eastern_tzinfo(datetime_module.tzinfo):
   """Implementation of the Eastern timezone where the NYSE is."""
   def utcoffset(self, dt):
     return datetime_module.timedelta(hours=-5) + self.dst(dt)
-  
+
   def _FirstSunday(self, dt):
     """First Sunday on or after dt."""
     return dt + datetime_module.timedelta(days=(6-dt.weekday()))
@@ -109,3 +110,8 @@ def arg2int(s):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def template_path(s):
   return os.path.join(os.path.dirname(__file__), 'templates', s)
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def template_render(file_name, template_values):
+  return template.render(template_path(file_name),
+                         template_values)

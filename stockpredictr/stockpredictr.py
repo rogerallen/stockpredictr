@@ -1,6 +1,6 @@
 # stockpredictr.py
 #
-# Copyright (C) 2009,2010 Roger Allen (rallen@gmail.com)
+# Copyright (C) 2009-2013 Roger Allen (rallen@gmail.com)
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -31,7 +31,7 @@ use_library('django', '1.2')
 #use_library('django', '0.96')
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-from google.appengine.ext import webapp
+import webapp2 as webapp
 from google.appengine.ext.webapp.util import run_wsgi_app
 from stockpredictr_views  import *
 
@@ -53,4 +53,3 @@ def main():
 
 if __name__ == "__main__": # pragma: no cover
   main()
-

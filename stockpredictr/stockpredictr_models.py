@@ -1,6 +1,6 @@
 # stockpredictr_models.py
 #
-# Copyright (C) 2009,2010 Roger Allen (rallen@gmail.com)
+# Copyright (C) 2009-2013 Roger Allen (rallen@gmail.com)
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -19,10 +19,11 @@
 
 import datetime as datetime_module
 from django.utils import simplejson
+import webapp2 as webapp
+from google.appengine.api import memcache
 from google.appengine.api import users
-from google.appengine.ext import webapp
-from google.appengine.ext import db
 from google.appengine.api import urlfetch
+from google.appengine.ext import db
 
 from stockpredictr_utils import *
 
@@ -30,9 +31,9 @@ from stockpredictr_utils import *
 # our databases
 class Stock(db.Model):
   """
-  Table of Stocks used in contests. 
+  Table of Stocks used in contests.
   symbol - an all-caps version of the stock symbol
-  recent_price[_time] - cache the latest price.  
+  recent_price[_time] - cache the latest price.
   """
   symbol            = db.StringProperty()
   recent_price      = db.FloatProperty()
@@ -142,7 +143,7 @@ def get_my_current_user():
   """return the MyUser for the current_user, adding if necessary"""
   if users.get_current_user() == None:
     return None
-  
+
   my_users = db.GqlQuery("SELECT * FROM MyUser WHERE user = :1",
                          users.get_current_user()).fetch(1)
   if len(my_users) == 0:
@@ -188,6 +189,40 @@ def make_private(contest, private, passphrase):
     contest.salt       = None
     contest.hashphrase = None
 
+def get_open_contests(num):
+  mckey = "open_contests"+str(num)
+  open_contests = memcache.get(mckey)
+  if open_contests is not None:
+    logging.info("get_open_contests from memcache")
+  else:
+    logging.info("get_open_contests from DB")
+    today = datetime_module.date.today()
+    open_contests_query = db.GqlQuery(
+      "SELECT * FROM Contest " +
+      "WHERE close_date >= :1 " +
+      "ORDER BY close_date ASC", today)
+    open_contests = open_contests_query.fetch(num)
+    if not memcache.add(mckey,open_contests,10):
+      logging.error('get_open_contests memcache set failure')
+  return open_contests
+
+def get_closed_contests(num):
+  mckey = "closed_contests"+str(num)
+  closed_contests = memcache.get(mckey)
+  if closed_contests is not None:
+    logging.info("get_closed_contests from memcache")
+  else:
+    logging.info("get_closed_contests from DB")
+    today = datetime_module.date.today()
+    closed_contests_query = db.GqlQuery(
+      "SELECT * FROM Contest " +
+      "WHERE close_date < :1 " +
+      "ORDER BY close_date DESC", today)
+    closed_contests = closed_contests_query.fetch(num)
+    if not memcache.add(mckey,closed_contests,1*60):
+      logging.error('get_closed_contests memcache set failure')
+  return closed_contests
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def finish_contest(contest, final_value):
   """
@@ -201,12 +236,12 @@ def finish_contest(contest, final_value):
   for prediction in prediction_query:
     prediction.winner = False
     prediction.put()
-    delta = abs(prediction.value - contest.final_value) 
+    delta = abs(prediction.value - contest.final_value)
     if min_pred > delta:
       min_pred = delta
   if contest.final_value >= 0.0:
     for prediction in prediction_query:
-      delta = abs(prediction.value - contest.final_value) 
+      delta = abs(prediction.value - contest.final_value)
       if min_pred == delta:
         prediction.winner = True
         prediction.put()
@@ -234,4 +269,3 @@ class FauxPrediction(object):
     self.winner        = winner
     self.is_price      = is_price
     self.leader        = False
-

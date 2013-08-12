@@ -1,6 +1,6 @@
 # stockpredictr_views.py
 #
-# Copyright (C) 2009,2010 Roger Allen (rallen@gmail.com)
+# Copyright (C) 2009-2013 Roger Allen (rallen@gmail.com)
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -18,7 +18,7 @@
 # 02110-1301, USA.
 
 import datetime as datetime_module
-from google.appengine.ext import webapp
+import webapp2 as webapp
 from google.appengine.ext import db
 from google.appengine.ext.webapp import template
 from django.utils import simplejson
@@ -38,7 +38,7 @@ class DefaultTemplate(dict):
       logged_in_flag = True
     else:
       login_url = users.create_login_url(uri)
-      login_url_linktext = 'Login'  
+      login_url_linktext = 'Login'
     self['logged_in_flag']     = logged_in_flag
     self['login_url']          = login_url
     self['login_url_linktext'] = login_url_linktext
@@ -57,22 +57,9 @@ class HandleRoot(webapp.RequestHandler):
           form_private="", form_passphrase=""
           ):
     template_values = DefaultTemplate(self.request.uri)
-
-    today = datetime_module.date.today()
-    open_contests_query = db.GqlQuery(
-      "SELECT * FROM Contest " +
-      "WHERE close_date >= :1 " +
-      "ORDER BY close_date ASC", today)
-    open_contests = open_contests_query.fetch(G_LIST_SIZE)
-    closed_contests_query = db.GqlQuery(
-      "SELECT * FROM Contest " +
-      "WHERE close_date < :1 " +
-      "ORDER BY close_date DESC", today)
-    closed_contests = closed_contests_query.fetch(G_LIST_SIZE)
-
     template_values.update({
-      'open_contests':      open_contests,
-      'closed_contests':    closed_contests,
+      'open_contests':      get_open_contests(G_LIST_SIZE),
+      'closed_contests':    get_closed_contests(G_LIST_SIZE),
       'error_flag':         error_flag,
       'error_message':      error_message,
       'form_symbol':        form_symbol,
@@ -82,7 +69,7 @@ class HandleRoot(webapp.RequestHandler):
       'form_private':       form_private,
       'form_passphrase':    form_passphrase,
       })
-    self.response.out.write(template.render(template_path('index.html'), template_values))
+    self.response.out.write(template_render('index.html', template_values))
 
   def post(self):
     """Create a new contest..."""
@@ -135,7 +122,7 @@ class HandleRoot(webapp.RequestHandler):
                form_passphrase = self.request.get('passphrase'),
                )
 
-  
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # GET about.html
 class HandleAbout(webapp.RequestHandler):
@@ -215,7 +202,7 @@ class HandleContest(webapp.RequestHandler):
               'name': p.user.nickname,
               'value': get_price_str(p.value)[1:] # drop '$'
               }] + json_data["predictions"]
-          
+
         # see if we should allow the contest to be updated
         now = get_market_time_now()
         contest_close_market_open = get_market_time_open(
@@ -231,7 +218,7 @@ class HandleContest(webapp.RequestHandler):
           stock_name += " Final Price"
           stock_price = contest.final_value
 
-        json_data["price"] = { 
+        json_data["price"] = {
           'name': contest.stock.symbol.replace(' ','\n'),
           'value': get_price_str(stock_price)[1:] # drop '$'
           }
@@ -268,7 +255,7 @@ class HandleContest(webapp.RequestHandler):
         next_index            = cur_index+prediction_count
         next_predictions_flag = False
         json_data             = '{}'
-        
+
       template_values.update({
         'authorized':              authorized_to_view,
         'contest':                 contest,
@@ -297,7 +284,7 @@ class HandleContest(webapp.RequestHandler):
         'error_message':      error_message,
         })
       self.response.out.write(template.render(template_path('error.html'), template_values))
-      
+
   def post(self,contest_id):
     """There are 3 different forms to handle:
     passphrase, prediction and final_value
@@ -308,7 +295,7 @@ class HandleContest(webapp.RequestHandler):
       self.edit_prediction(contest_id)
     else:
       self.finish_contest(contest_id)
-    
+
   def edit_prediction(self,contest_id):
     try:
       logging.info("HandleContest/%d POST edit_prediction" % int(contest_id))
@@ -420,7 +407,7 @@ class HandleContests(webapp.RequestHandler):
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # GET user/id
-# POST user/id 
+# POST user/id
 class HandleUser(webapp.RequestHandler):
   def get(self,user_id):
     try:
@@ -454,7 +441,7 @@ class HandleUser(webapp.RequestHandler):
         'error_message':      error_message,
         })
       self.response.out.write(template.render(template_path('error.html'), template_values))
-      
+
   def post(self,user_id):
      try:
        logging.info("HandleUser/%d POST" % int(user_id))
@@ -463,7 +450,7 @@ class HandleUser(webapp.RequestHandler):
          my_user.nickname = self.request.get('nickname')
          my_user.put()
          logging.info('updated nickname to %s' % (my_user.nickname))
-     except: 
+     except:
       logging.exception("HandleUser Error")
      self.redirect('/user/'+user_id)
 

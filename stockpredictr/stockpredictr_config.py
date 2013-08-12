@@ -1,6 +1,6 @@
 # stockpredictr_config.py
 #
-# Copyright (C) 2009,2010 Roger Allen (rallen@gmail.com)
+# Copyright (C) 2009-2013 Roger Allen (rallen@gmail.com)
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -18,21 +18,16 @@
 # 02110-1301, USA.
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-G_LIST_SIZE=25
+G_LIST_SIZE=50
 
 g_footer = """
-<p>Copyright (c) 2009-2010 Stockpredictr. All rights reserved.
+<p>Copyright (c) 2009-2013 Roger Allen. All rights reserved.
 Design by <a href="http://www.freecsstemplates.org/">Free CSS Templates</a>.</p>
 """
 
 g_welcome_warning = """<h2>Welcome</h2>
 <p>Welcome to Stockpredictr, the site for stock
-prediction contests.</p>
-<h2>Warning</h2>
-<p>This site is being actively developed and the software is
-beta-quality.  Please report any issues to the
-<a href="http://code.google.com/p/stockpredictr/issues">the development
-site</a>.  Thanks!</p>
+prediction contests.  Please report any issues to the
+<a href="https://github.com/rogerallen/stockpredictr/issues">the development site</a>.
+Thank you!</p>
 """
-
-
