@@ -96,7 +96,6 @@ class HandleRoot(webapp.RequestHandler):
       make_private(contest,
                    self.request.get('private') == '1',
                    self.request.get('passphrase'))
-      #contest.put()
       put_contest(contest)
       logging.info("contest id"+str(contest.key().id()))
       self.redirect('/contest/'+str(contest.key().id()))
@@ -302,25 +301,10 @@ class HandleContest(webapp.RequestHandler):
       logging.info("HandleContest/%d POST edit_prediction" % int(contest_id))
       if not users.get_current_user():
         raise ValueError('must login to edit prediction')
+      # XXX FIXME check to be sure we are allowed to edit!
       contest = Contest.get_by_id(long(contest_id))
-      cur_user = get_my_current_user()
       value = float(self.request.get('prediction'))
-      prediction_query = db.GqlQuery("SELECT * FROM Prediction WHERE user = :1 AND contest = :2",
-                                     cur_user,
-                                     contest)
-      predictions = prediction_query.fetch(2)
-      if predictions:
-        assert(len(predictions) == 1)
-        logging.info('found previous prediction')
-        prediction = predictions[0]
-      else:
-        logging.info('adding prediction to db')
-        prediction = Prediction()
-      prediction.user    = cur_user
-      prediction.contest = contest
-      prediction.value   = value
-      prediction.winner  = False
-      prediction.put()
+      update_prediction(contest, value)
       self.get(contest_id)
     except:
       logging.exception("EditPrediction Error")

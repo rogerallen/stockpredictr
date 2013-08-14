@@ -62,6 +62,54 @@ class Stock(db.Model):
   recent_price      = db.FloatProperty()
   recent_price_time = db.DateTimeProperty(auto_now=True)
 
+STOCK_CACHE_SECONDS = 60 # Update every minute, at most
+
+def get_new_stock_key():
+  return get_new_key(Stock,'Stock')
+
+def get_stock_timeout():
+  timeout = STOCK_CACHE_SECONDS
+  if not market_open():
+    timeout = 15*STOCK_CACHE_SECONDS # 15x slower during close
+  return timeout
+
+def get_stock_from_db(stock_query,symbol):
+  mckey = "stock"+symbol
+  stock = memcache.get(mckey)
+  if stock is not None:
+    logging.info("get_stock_from_db %s from memcache"%(symbol))
+  else:
+    logging.info("get_stock_from_db %s from DB"%(symbol))
+    stocks = stock_query.fetch(1)
+    if len(stocks) == 0:
+      stock = None
+    else:
+      assert(len(stocks) == 1)
+      stock = stocks[0]
+      # stocks from DB need to have prices updated
+      logging.info("going to get stock price...")
+      try:
+        stock.recent_price = get_stock_price_from_web(symbol)
+        stock.put()
+      except urlfetch.DownloadError:
+        logging.exception("GetStockPrice DownloadError.")
+        stock_price = stock.recent_price
+      except db.BadValueError:
+        logging.exception("GetStockPrice BadValueError.")
+        stock_price = stock.recent_price
+    # put updated stock into memcache for the future
+    if ((stock is not None) and
+        (not memcache.set(mckey,stock,get_stock_timeout()))):
+      logging.error('get_stock_from_db %s memcache set failure'%(symbol))
+  return stock
+
+def get_stock_from_symbol(symbol):
+  """return the Stock for the symbol.  None if it doesn't exist."""
+  return get_stock_from_db(db.GqlQuery("SELECT * FROM Stock " +
+                                       "WHERE symbol = :1",
+                                       symbol.upper()),
+                           symbol)
+
 def get_or_add_stock_from_symbol(symbol):
   """get stock from symbol.  if it is invalid, return None.
   if it doesn't exist, add it to db
@@ -70,76 +118,40 @@ def get_or_add_stock_from_symbol(symbol):
   stock = get_stock_from_symbol(symbol)
   if stock == None:
     logging.info('validating stock %s' % (symbol))
-    stock_price = get_stock_price_uncached(symbol)
+    stock_price = get_stock_price_from_web(symbol)
     if type(stock_price) != type(float()):
       logging.info('invalid stock')
       return None
     logging.info('adding stock %s and price %f to db' % (symbol, stock_price))
-    stock = Stock()
+    stock = Stock(key=get_new_stock_key())
     stock.symbol = symbol
     stock.recent_price = stock_price
     stock.put()
+    mckey = "stock"+symbol
+    if not memcache.set(mckey,stock,get_stock_timeout()):
+      logging.error('get_or_add_stock_from_symbol %s memcache set failure'%(symbol))
   return stock
 
-def get_stock_from_symbol(symbol):
-  """return the Stock for the symbol.  None if it doesn't exist."""
-  symbol = symbol.upper()
-  stocks   = db.GqlQuery("SELECT * FROM Stock WHERE symbol = :1",
-                         symbol).fetch(1)
-  if len(stocks) == 0:
-    return None
-  else:
-    assert(len(stocks) == 1)
-    stock = stocks[0]
-  return stock
-
-STOCK_CACHE_SECONDS = 60 # Update every minute, at most
 def get_stock_price(symbol):
   """get stock price and cache the result"""
   stock = get_stock_from_symbol(symbol)
   if stock == None:
     logging.info("didn't find symbol %s"%(symbol))
     return "Unknown"
-  now = datetime_module.datetime.utcnow()
-  dt = now - stock.recent_price_time
-  #logging.info("now "+str(now))
-  #logging.info("dt  "+str(dt))
-  #logging.info("d   "+str(datetime.timedelta(0,STOCK_CACHE_SECONDS,0)))
-  if market_open():
-    N = 1  # one period during open
-  else:
-    N = 15 # 15x slower during close
-  if dt > datetime_module.timedelta(0,N*STOCK_CACHE_SECONDS,0):
-    logging.info("going to get stock price...")
-    try:
-      stock_price = get_stock_price_uncached(symbol)
-      stock.recent_price = stock_price
-      stock.put()
-    except urlfetch.DownloadError:
-      logging.exception("GetStockPrice DownloadError. Returning cached value")
-      stock_price = stock.recent_price
-    except db.BadValueError:
-      logging.exception("GetStockPrice BadValueError. Returning cached value")
-      stock_price = stock.recent_price
-  else:
-    logging.info("returning cached stock price")
-    stock_price = stock.recent_price
-  return stock_price
+  return stock.recent_price
 
-def get_stock_price_uncached(symbol):
+def get_stock_price_from_web(symbol):
   # add 'TEST' short-circuit stock that is always $12.0625/share
   if symbol == 'TEST':
     return 12.0625
-  #stock_price_url = "http://brivierestockquotes.appspot.com/?q=%s" % (symbol)
+  # FIXME -- eventually google finance will go away?
   stock_price_url = "http://finance.google.com/finance/info?client=ig&q=%s" % (symbol)
   stock_price_result = urlfetch.fetch(stock_price_url)
   if stock_price_result.status_code == 200:
-    #tmp = stock_price_result.content.replace(',]',']')
     tmp = stock_price_result.content.replace('// ','')
     logging.info("stock response = %s" % (tmp))
     stock_data = simplejson.loads(tmp)
     if len(stock_data) > 0:
-      #stock_price = float(stock_data[0]["price"])
       stock_price = float(stock_data[0]["l"])
     else:
       stock_price = "Unknown"
@@ -265,8 +277,6 @@ def put_contest(contest):
   if not memcache.set("open_contests",contests,60):
     logging.error('put_contest:open_contests memcache set failure')
 
-
-
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def finish_contest(contest, final_value):
   """
@@ -299,6 +309,26 @@ class Prediction(db.Model):
   contest = db.ReferenceProperty(Contest)
   value   = db.FloatProperty()
   winner  = db.BooleanProperty()
+
+def update_prediction(contest, value):
+  cur_user = get_my_current_user()
+  prediction_query = db.GqlQuery("SELECT * FROM Prediction WHERE user = :1 AND contest = :2",
+                                 cur_user,
+                                 contest)
+  predictions = prediction_query.fetch(2)
+  if predictions:
+    assert(len(predictions) == 1)
+    logging.info('found previous prediction')
+    prediction = predictions[0]
+  else:
+    logging.info('adding prediction to db')
+    prediction = Prediction()
+  prediction.user    = cur_user
+  prediction.contest = contest
+  prediction.value   = value
+  prediction.winner  = False
+  prediction.put()
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 class FauxPrediction(object):
