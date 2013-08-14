@@ -17,6 +17,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 # 02110-1301, USA.
 
+import bisect
 import datetime as datetime_module
 from django.utils import simplejson
 import webapp2 as webapp
@@ -25,7 +26,29 @@ from google.appengine.api import users
 from google.appengine.api import urlfetch
 from google.appengine.ext import db
 
+from stockpredictr_config import G_LIST_SIZE
 from stockpredictr_utils import *
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# we need to assign keys ourselves for Contests & such.
+# see get_new_contest_key for usage
+def get_new_key(model, model_str):
+  mckey = "%s_ids"%(model_str)
+  model_ids = memcache.get(mckey)
+  if ((model_ids is not None) and (len(model_ids) > 0)):
+    logging.info("get_new_key from memcache")
+  else:
+    logging.info("get_new_key alloc new")
+    try:
+      model_ids_batch = db.allocate_ids(model.all().get().key(), 10)
+    except AttributeError:
+      model_ids_batch = db.allocate_ids(db.Key.from_path(model_str, 1), 10)
+    model_ids = range(model_ids_batch[0], model_ids_batch[1] + 1)
+  model_key = db.Key.from_path(model_str, model_ids.pop(0))
+  if not memcache.set(mckey,model_ids,30*24*60*60): # 30 days
+    logging.error('get_new_key memcache set failure')
+  logging.info("get_new_key: model=%s id=%s"%(model_str, model_key.id()))
+  return model_key
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # our databases
@@ -189,39 +212,60 @@ def make_private(contest, private, passphrase):
     contest.salt       = None
     contest.hashphrase = None
 
-def get_open_contests(num):
-  mckey = "open_contests"+str(num)
-  open_contests = memcache.get(mckey)
-  if open_contests is not None:
-    logging.info("get_open_contests from memcache")
-  else:
-    logging.info("get_open_contests from DB")
-    today = datetime_module.date.today()
-    open_contests_query = db.GqlQuery(
-      "SELECT * FROM Contest " +
-      "WHERE close_date >= :1 " +
-      "ORDER BY close_date ASC", today)
-    open_contests = open_contests_query.fetch(num)
-    if not memcache.add(mckey,open_contests,10):
-      logging.error('get_open_contests memcache set failure')
-  return open_contests
+def get_new_contest_key():
+  return get_new_key(Contest,'Contest')
 
-def get_closed_contests(num):
-  mckey = "closed_contests"+str(num)
-  closed_contests = memcache.get(mckey)
-  if closed_contests is not None:
-    logging.info("get_closed_contests from memcache")
+def get_contests(contests_query,contest_str,timeout):
+  num = G_LIST_SIZE
+  mckey = contest_str
+  contests = memcache.get(mckey)
+  if contests is not None:
+    logging.info("get_%s from memcache"%(contest_str))
   else:
-    logging.info("get_closed_contests from DB")
-    today = datetime_module.date.today()
-    closed_contests_query = db.GqlQuery(
-      "SELECT * FROM Contest " +
-      "WHERE close_date < :1 " +
-      "ORDER BY close_date DESC", today)
-    closed_contests = closed_contests_query.fetch(num)
-    if not memcache.add(mckey,closed_contests,1*60):
-      logging.error('get_closed_contests memcache set failure')
-  return closed_contests
+    logging.info("get_%s from DB",contest_str)
+    contests = contests_query.fetch(num)
+    if not memcache.set(mckey,contests,timeout):
+      logging.error('get_%s memcache set failure'%(contest_str))
+  # what happens on none? if contests is not None:
+  return contests[:num] # in case cache has more
+
+def get_open_contests():
+  today = datetime_module.date.today()
+  return get_contests(db.GqlQuery("SELECT * FROM Contest " +
+                                  "WHERE close_date >= :1 " +
+                                  "ORDER BY close_date ASC", today),
+                      "open_contests",
+                      60)
+
+def get_closed_contests():
+  today = datetime_module.date.today()
+  return get_contests(db.GqlQuery("SELECT * FROM Contest " +
+                                  "WHERE close_date < :1 " +
+                                  "ORDER BY close_date DESC", today),
+                      "closed_contests",
+                      60)
+
+def put_contest(contest):
+  contest_id = str(contest.key().id())
+  logging.info("put_contest:"+contest_id)
+  contest.put()
+  mckey = "contest"+contest_id
+  if not memcache.set(mckey,contest,60):
+    logging.error('put_contest:%s memcache set failure'%(mckey))
+  # also insert into the open_contests list
+  contests = memcache.get("open_contests")
+  if contests is not None:
+    close_dates = [v.close_date for v in contests]
+    i = bisect.bisect_left(close_dates,contest.close_date)
+    contests = contests[0:i] + [contest] + contests[i:]
+  else:
+    contests = [contest]
+  for i,c in enumerate(contests):
+    logging.info("put_contest: %d %s"%(i,c.key().id()))
+  if not memcache.set("open_contests",contests,60):
+    logging.error('put_contest:open_contests memcache set failure')
+
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def finish_contest(contest, final_value):

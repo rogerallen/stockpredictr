@@ -58,8 +58,8 @@ class HandleRoot(webapp.RequestHandler):
           ):
     template_values = DefaultTemplate(self.request.uri)
     template_values.update({
-      'open_contests':      get_open_contests(G_LIST_SIZE),
-      'closed_contests':    get_closed_contests(G_LIST_SIZE),
+      'open_contests':      get_open_contests(),
+      'closed_contests':    get_closed_contests(),
       'error_flag':         error_flag,
       'error_message':      error_message,
       'form_symbol':        form_symbol,
@@ -81,7 +81,7 @@ class HandleRoot(webapp.RequestHandler):
       if stock == None:
         raise ValueError('could not find the stock symbol')
       logging.info('adding contest to db')
-      contest = Contest()
+      contest = Contest(key=get_new_contest_key())
       contest.owner        = cur_user
       contest.stock        = stock
       contest.close_date   = datetime_module.date(
@@ -96,7 +96,8 @@ class HandleRoot(webapp.RequestHandler):
       make_private(contest,
                    self.request.get('private') == '1',
                    self.request.get('passphrase'))
-      contest.put()
+      #contest.put()
+      put_contest(contest)
       logging.info("contest id"+str(contest.key().id()))
       self.redirect('/contest/'+str(contest.key().id()))
     except ValueError, verr: # python2.6!
