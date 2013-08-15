@@ -29,6 +29,11 @@ from google.appengine.ext import db
 from stockpredictr_config import G_LIST_SIZE
 from stockpredictr_utils import *
 
+STOCK_CACHE_SECONDS   = 60         # Update every minute, at most
+KEY_CACHE_SECONDS     = 1*24*60*60 # 1 day
+CONTEST_CACHE_SECONDS = 60
+MYUSER_CACHE_SECONDS  = 60
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # we need to assign keys ourselves for Contests & such.
 # see get_new_contest_key for usage
@@ -38,14 +43,15 @@ def get_new_key(model, model_str):
   if ((model_ids is not None) and (len(model_ids) > 0)):
     logging.info("get_new_key from memcache")
   else:
-    logging.info("get_new_key alloc new")
     try:
       model_ids_batch = db.allocate_ids(model.all().get().key(), 10)
+      logging.info("get_new_key alloc new from existing model")
     except AttributeError:
       model_ids_batch = db.allocate_ids(db.Key.from_path(model_str, 1), 10)
+      logging.info("get_new_key alloc new")
     model_ids = range(model_ids_batch[0], model_ids_batch[1] + 1)
   model_key = db.Key.from_path(model_str, model_ids.pop(0))
-  if not memcache.set(mckey,model_ids,30*24*60*60): # 30 days
+  if not memcache.set(mckey,model_ids,KEY_CACHE_SECONDS):
     logging.error('get_new_key memcache set failure')
   logging.info("get_new_key: model=%s id=%s"%(model_str, model_key.id()))
   return model_key
@@ -61,8 +67,6 @@ class Stock(db.Model):
   symbol            = db.StringProperty()
   recent_price      = db.FloatProperty()
   recent_price_time = db.DateTimeProperty(auto_now=True)
-
-STOCK_CACHE_SECONDS = 60 # Update every minute, at most
 
 def get_new_stock_key():
   return get_new_key(Stock,'Stock')
@@ -174,27 +178,119 @@ class MyUser(db.Model):
   user     = db.UserProperty()
   authorized_contest_list = db.ListProperty(db.Key)
 
-def get_my_current_user():
+def get_new_myuser_key():
+  return get_new_key(MyUser,'MyUser')
+
+def get_myuser_from_user_id(user_id):
+  mckey = "myuser_uid"+user_id
+  myuser = memcache.get(mckey)
+  if myuser is not None:
+    logging.info("get_myuser_from_user_id %s from memcache"%(user_id))
+  else:
+    logging.info("get_myuser_from_user_id %s from DB"%(user_id))
+    myusers = db.GqlQuery("SELECT * FROM MyUser WHERE user = :1",
+                          users.get_current_user()
+                          ).fetch(1)
+    if len(myusers) == 0:
+      myuser = None
+    else:
+      assert(len(myusers) == 1)
+      myuser = myusers[0]
+    if ((myuser is not None) and
+        (not memcache.set(mckey,myuser,MYUSER_CACHE_SECONDS))):
+      logging.error('get_myuser_from_user_id %s memcache set failure' %
+                    (myuser.nickname))
+  if myuser is not None:
+    logging.info("get_myuser_from_user_id return %s"%(myuser.nickname))
+  else:
+    logging.info("get_myuser_from_user_id return None")
+  return myuser
+
+def get_myuser_from_myuser_id(myuser_id):
+  assert(type(myuser_id) == type(str()))
+  mckey = "myuser_myuid"+myuser_id
+  myuser = memcache.get(mckey)
+  if myuser is not None:
+    logging.info("get_myuser_from_myuser_id %s from memcache"%(myuser_id))
+  else:
+    logging.info("get_myuser_from_myuser_id %s from DB"%(myuser_id))
+    myuser = MyUser.get_by_id(long(myuser_id))
+    if ((myuser is not None) and
+        (not memcache.set(mckey,myuser,MYUSER_CACHE_SECONDS))):
+      logging.error('get_myuser_from_db %s memcache set failure' %
+                    (myuser.nickname))
+  if myuser is not None:
+    logging.info("get_myuser_from_myuser_id return %s"%(myuser.nickname))
+  else:
+    logging.info("get_myuser_from_myuser_id return None")
+  return myuser
+
+def update_myuser_memcache(myuser):
+  mckey = "myuser_uid"+myuser.user.user_id()
+  if not memcache.set(mckey,myuser,MYUSER_CACHE_SECONDS):
+    logging.error('update_myuser_memcache %s memcache uid set failure' %
+                  (myuser.nickname))
+  mckey = "myuser_myuid"+str(myuser.key().id())
+  if not memcache.set(mckey,myuser,MYUSER_CACHE_SECONDS):
+    logging.error('update_myuser_memcache %s memcache myuid set failure' %
+                  (myuser.nickname))
+
+def get_current_myuser():
   """return the MyUser for the current_user, adding if necessary"""
   if users.get_current_user() == None:
     return None
+  myuser = get_myuser_from_user_id(users.get_current_user().user_id())
+  if myuser is None:
+    logging.info('adding current user %s to db' %
+                 (users.get_current_user().nickname()))
+    myuser = MyUser(key=get_new_myuser_key())
+    myuser.user     = users.get_current_user()
+    myuser.nickname = users.get_current_user().nickname()
+    myuser.wins     = 0
+    myuser.losses   = 0
+    myuser.win_pct  = 0.0
+    myuser.put()
+    update_myuser_memcache(myuser)
+  logging.info('get_current_myuser %s uid=%s myuid=%s' %
+               (myuser.nickname,
+                users.get_current_user().user_id(),
+                myuser.key().id()))
+  return myuser
 
-  my_users = db.GqlQuery("SELECT * FROM MyUser WHERE user = :1",
-                         users.get_current_user()).fetch(1)
-  if len(my_users) == 0:
-    logging.info('adding current user %s to db' % (users.get_current_user().nickname()))
-    my_user = MyUser()
-    my_user.user     = users.get_current_user()
-    my_user.nickname = users.get_current_user().nickname()
-    my_user.wins     = 0
-    my_user.losses   = 0
-    my_user.win_pct  = 0.0
-    my_user.put()
-  else:
-    assert(len(my_users) == 1)
-    my_user = my_users[0]
-  logging.info('get_my_current_user %s' % (my_user.nickname))
-  return my_user
+def current_user_authorized_to_edit(edit_user):
+  return edit_user.user == users.get_current_user()
+
+def set_myuser_nickname(the_user,nickname):
+  the_user.nickname = nickname
+  the_user.put()
+  update_myuser_memcache(the_user)
+  logging.info('updated nickname to %s' % (the_user.nickname))
+
+def update_all_users_winloss():
+  logging.info("update_all_users_winloss")
+  for user in db.GqlQuery("SELECT * FROM MyUser"):
+    user.wins = 0
+    user.losses = 0
+    for prediction in db.GqlQuery("SELECT * FROM Prediction WHERE user = :1",user):
+      if prediction.contest.final_value >= 0.0:
+        if prediction.winner:
+          user.wins += 1
+        else:
+          user.losses += 1
+    try:
+      user.win_pct = 100*float(user.wins)/float(user.wins + user.losses)
+    except ZeroDivisionError:
+      user.win_pct = 0.0
+    # round to nearest 100th
+    user.win_pct = int(user.win_pct*100)/100.0
+    user.put()
+    update_myuser_memcache(user)
+
+def authorize_contest(user,contest):
+  logging.info("authorize_contest %s %s"%(user.nickname,contest.key().id()))
+  user.authorized_contest_list.append(contest.key())
+  user.put()
+  update_myuser_memcache(user)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 class Contest(db.Model):
@@ -227,7 +323,7 @@ def make_private(contest, private, passphrase):
 def get_new_contest_key():
   return get_new_key(Contest,'Contest')
 
-def get_contests(contests_query,contest_str,timeout):
+def get_contests(contests_query,contest_str):
   num = G_LIST_SIZE
   mckey = contest_str
   contests = memcache.get(mckey)
@@ -236,7 +332,7 @@ def get_contests(contests_query,contest_str,timeout):
   else:
     logging.info("get_%s from DB",contest_str)
     contests = contests_query.fetch(num)
-    if not memcache.set(mckey,contests,timeout):
+    if not memcache.set(mckey,contests,CONTEST_CACHE_SECONDS):
       logging.error('get_%s memcache set failure'%(contest_str))
   # what happens on none? if contests is not None:
   return contests[:num] # in case cache has more
@@ -246,23 +342,21 @@ def get_open_contests():
   return get_contests(db.GqlQuery("SELECT * FROM Contest " +
                                   "WHERE close_date >= :1 " +
                                   "ORDER BY close_date ASC", today),
-                      "open_contests",
-                      60)
+                      "open_contests")
 
 def get_closed_contests():
   today = datetime_module.date.today()
   return get_contests(db.GqlQuery("SELECT * FROM Contest " +
                                   "WHERE close_date < :1 " +
                                   "ORDER BY close_date DESC", today),
-                      "closed_contests",
-                      60)
+                      "closed_contests")
 
 def put_contest(contest):
   contest_id = str(contest.key().id())
   logging.info("put_contest:"+contest_id)
   contest.put()
   mckey = "contest"+contest_id
-  if not memcache.set(mckey,contest,60):
+  if not memcache.set(mckey,contest,CONTEST_CACHE_SECONDS):
     logging.error('put_contest:%s memcache set failure'%(mckey))
   # also insert into the open_contests list
   contests = memcache.get("open_contests")
@@ -274,7 +368,7 @@ def put_contest(contest):
     contests = [contest]
   for i,c in enumerate(contests):
     logging.info("put_contest: %d %s"%(i,c.key().id()))
-  if not memcache.set("open_contests",contests,60):
+  if not memcache.set("open_contests",contests,CONTEST_CACHE_SECONDS):
     logging.error('put_contest:open_contests memcache set failure')
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -311,7 +405,7 @@ class Prediction(db.Model):
   winner  = db.BooleanProperty()
 
 def update_prediction(contest, value):
-  cur_user = get_my_current_user()
+  cur_user = get_current_myuser()
   prediction_query = db.GqlQuery("SELECT * FROM Prediction WHERE user = :1 AND contest = :2",
                                  cur_user,
                                  contest)

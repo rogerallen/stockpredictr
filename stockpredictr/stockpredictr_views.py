@@ -42,7 +42,7 @@ class DefaultTemplate(dict):
     self['logged_in_flag']     = logged_in_flag
     self['login_url']          = login_url
     self['login_url_linktext'] = login_url_linktext
-    self['cur_user']           = get_my_current_user()
+    self['cur_user']           = get_current_myuser()
     self['g_footer']           = g_footer
     self['g_welcome_warning']  = g_welcome_warning
 
@@ -76,7 +76,7 @@ class HandleRoot(webapp.RequestHandler):
     try:
       if not users.get_current_user():
         raise ValueError('must login to create a contest')
-      cur_user = get_my_current_user()
+      cur_user = get_current_myuser()
       stock = get_or_add_stock_from_symbol(self.request.get('symbol'))
       if stock == None:
         raise ValueError('could not find the stock symbol')
@@ -339,12 +339,11 @@ class HandleContest(webapp.RequestHandler):
       if not users.get_current_user():
         raise ValueError('must login to authorize contest')
       logging.info('got cur_user')
-      cur_user = get_my_current_user()
+      cur_user = get_current_myuser()
       passphrase_match = contest.hashphrase == myhash(passphrase+contest.salt)
       logging.info('passphrase=%s match=%s'%(passphrase,passphrase_match))
       if passphrase_match:
-        cur_user.authorized_contest_list.append(contest.key())
-        cur_user.put()
+        authorize_contest(cur_user,contest)
         self.get(contest_id)
       else:
         self.get(contest_id,
@@ -397,7 +396,7 @@ class HandleUser(webapp.RequestHandler):
   def get(self,user_id):
     try:
       template_values = DefaultTemplate(self.request.uri)
-      the_user = MyUser.get_by_id(long(user_id))
+      the_user = get_myuser_from_myuser_id(user_id)
       logging.info("HandleUser/%d GET" % int(user_id))
       cur_user = template_values['cur_user']
       try:
@@ -430,13 +429,11 @@ class HandleUser(webapp.RequestHandler):
   def post(self,user_id):
      try:
        logging.info("HandleUser/%d POST" % int(user_id))
-       my_user = MyUser.get_by_id(long(user_id))
-       if my_user.user == users.get_current_user():
-         my_user.nickname = self.request.get('nickname')
-         my_user.put()
-         logging.info('updated nickname to %s' % (my_user.nickname))
+       the_user = get_myuser_from_myuser_id(user_id)
+       if current_user_authorized_to_edit(the_user):
+         set_myuser_nickname(the_user,self.request.get('nickname'))
      except:
-      logging.exception("HandleUser Error")
+       logging.exception("HandleUser Error")
      self.redirect('/user/'+user_id)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -455,22 +452,7 @@ class FinishAnyContests(webapp.RequestHandler):
         final_value = get_stock_price(contest.stock.symbol)
         finish_contest(contest,final_value)
     # now get each person's win/loss record straight
-    for user in db.GqlQuery("SELECT * FROM MyUser"):
-      user.wins = 0
-      user.losses = 0
-      for prediction in db.GqlQuery("SELECT * FROM Prediction WHERE user = :1",user):
-        if prediction.contest.final_value >= 0.0:
-          if prediction.winner:
-            user.wins += 1
-          else:
-            user.losses += 1
-      try:
-        user.win_pct = 100*float(user.wins)/float(user.wins + user.losses)
-      except ZeroDivisionError:
-        user.win_pct = 0.0
-      # round to nearest 100th
-      user.win_pct = int(user.win_pct*100)/100.0
-      user.put()
+    update_all_users_winloss()
     self.response.headers['Content-Type'] = 'text/plain'
     self.response.out.write('Done')
 
