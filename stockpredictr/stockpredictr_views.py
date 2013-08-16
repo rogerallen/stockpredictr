@@ -80,26 +80,23 @@ class HandleRoot(webapp.RequestHandler):
       stock = get_or_add_stock_from_symbol(self.request.get('symbol'))
       if stock == None:
         raise ValueError('could not find the stock symbol')
-      logging.info('adding contest to db')
-      contest = Contest(key=get_new_contest_key())
-      contest.owner        = cur_user
-      contest.stock        = stock
-      contest.close_date   = datetime_module.date(
+      close_date = datetime_module.date(
         int(self.request.get('year')),
         int(self.request.get('month')),
         int(self.request.get('day')))
-      if contest.close_date <= datetime_module.date.today():
+      if close_date <= datetime_module.date.today():
         raise ValueError('contest date must be in the future')
-      if contest.close_date.weekday() >= 5:
+      if close_date.weekday() >= 5:
         raise ValueError('contest date must be a weekday')
-      contest.final_value  = -1.0
-      make_private(contest,
-                   self.request.get('private') == '1',
-                   self.request.get('passphrase'))
-      put_contest(contest)
+      logging.info('adding contest to db')
+      contest = add_contest(cur_user,
+                            stock,
+                            close_date,
+                            self.request.get('private') == '1',
+                            self.request.get('passphrase'))
       logging.info("contest id"+str(contest.key().id()))
       self.redirect('/contest/'+str(contest.key().id()))
-    except ValueError, verr: # python2.6!
+    except ValueError, verr:
       logging.exception("CreateContest ValueError")
       self.get(error_flag      = True,
                error_message   = verr,
@@ -144,19 +141,14 @@ class HandleContest(webapp.RequestHandler):
     try:
       template_values = DefaultTemplate(self.request.uri)
       logging.info("HandleContest/%d (GET)" % int(contest_id))
-      contest = Contest.get_by_id(long(contest_id))
+      contest = get_contest_by_id(contest_id)
+      if contest is None:
+        raise ValueError('no contest by that id')
       # check for privacy and authorization
       owner_flag = users.get_current_user() == contest.owner.user
-      in_authorized_list = False
-      cur_user = template_values['cur_user']
-      if cur_user:
-        in_authorized_list = contest.key() in cur_user.authorized_contest_list
       stock_price = None
-      authorized_to_view = True
-      if contest.private:
-        authorized_to_view = users.is_current_user_admin() or owner_flag or in_authorized_list
-        logging.info("private: allowed=%s" % (authorized_to_view))
-
+      cur_user = template_values['cur_user']
+      authorized_to_view = is_authorized_to_view(cur_user,contest)
       prediction_count = G_LIST_SIZE
       cur_index = arg2int(self.request.get('i'))
       if authorized_to_view:
@@ -204,11 +196,7 @@ class HandleContest(webapp.RequestHandler):
               }] + json_data["predictions"]
 
         # see if we should allow the contest to be updated
-        now = get_market_time_now()
-        contest_close_market_open = get_market_time_open(
-          contest.close_date.year, contest.close_date.month, contest.close_date.day
-          )
-        can_update_flag = now < contest_close_market_open
+        can_update_flag = allow_contest_update(contest)
         open_flag = contest.final_value < 0.0
         stock_name = contest.stock.symbol
         if open_flag:
@@ -301,8 +289,10 @@ class HandleContest(webapp.RequestHandler):
       logging.info("HandleContest/%d POST edit_prediction" % int(contest_id))
       if not users.get_current_user():
         raise ValueError('must login to edit prediction')
-      # XXX FIXME check to be sure we are allowed to edit!
-      contest = Contest.get_by_id(long(contest_id))
+      contest = get_contest_by_id(contest_id)
+      # FIXES BUG found by David
+      if not allow_contest_update(contest):
+        raise ValueError('nice try h4cker! no update allowed.')
       value = float(self.request.get('prediction'))
       update_prediction(contest, value)
       self.get(contest_id)
@@ -317,7 +307,7 @@ class HandleContest(webapp.RequestHandler):
   def finish_contest(self,contest_id):
     try:
       logging.info("HandleContest/%d POST finish_contest" % int(contest_id))
-      contest = Contest.get_by_id(long(contest_id))
+      contest = get_contest_by_id(contest_id)
       final_value = float(self.request.get('final_value'))
       finish_contest(contest,final_value)
       self.get(contest_id)
@@ -334,7 +324,7 @@ class HandleContest(webapp.RequestHandler):
     """
     try:
       logging.info("HandleContest/%d POST authorize_contest" % int(contest_id))
-      contest = Contest.get_by_id(long(contest_id))
+      contest = get_contest_by_id(contest_id)
       passphrase = self.request.get('passphrase')
       if not users.get_current_user():
         raise ValueError('must login to authorize contest')
@@ -363,23 +353,17 @@ class HandleContest(webapp.RequestHandler):
 # GET /contests
 class HandleContests(webapp.RequestHandler):
   def get(self):
-    template_values = DefaultTemplate(self.request.uri)
-    contest_count = G_LIST_SIZE
-    cur_index = arg2int(self.request.get('i'))
-    contests_query = db.GqlQuery(
-      "SELECT * FROM Contest ORDER BY close_date DESC")
-    contests = contests_query.fetch(contest_count,cur_index)
-    later_index = max(0,cur_index-contest_count)
-    later_contests_flag = later_index < cur_index
-    earlier_index = cur_index+len(contests)
-    # there may be an earlier prediction, but we have to test to be sure
-    earlier_contests_flag = earlier_index == cur_index+contest_count
+    template_values       = DefaultTemplate(self.request.uri)
+    display_count         = G_LIST_SIZE
+    cur_index             = arg2int(self.request.get('i'))
+    contests              = get_all_contests(cur_index)
+    # contest order is descending. "later" is lower than "earlier"
+    later_index           = max(0,cur_index-display_count)
+    earlier_index         = cur_index+len(contests)
+    later_contests_flag   = later_index < cur_index
+    earlier_contests_flag = earlier_index == cur_index+display_count
     if earlier_contests_flag:
-      try:
-        contest_earlier = contests_query.fetch(1,cur_index+contest_count)[0]
-      except IndexError:
-        # there is no earlier contest, so reset this flag
-        earlier_contests_flag = False
+      earlier_contests_flag = is_contest_at(cur_index+display_count)
     template_values.update({
       'contests':              contests,
       'later_contests_flag':   later_contests_flag,

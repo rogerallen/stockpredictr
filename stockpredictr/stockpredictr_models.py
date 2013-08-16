@@ -29,10 +29,21 @@ from google.appengine.ext import db
 from stockpredictr_config import G_LIST_SIZE
 from stockpredictr_utils import *
 
-STOCK_CACHE_SECONDS   = 60         # Update every minute, at most
-KEY_CACHE_SECONDS     = 1*24*60*60 # 1 day
-CONTEST_CACHE_SECONDS = 60
-MYUSER_CACHE_SECONDS  = 60
+# NOTE/FIXME -- I'm using memcache.set() quite a bit in the code below.
+# The docs say set() is not thread-safe.  Keep this in mind if/when
+# we try to adjust the threadsafe app.yaml
+
+# NOTE: Special memcache handling required:
+# We've got a few lists to deal with:
+#   contests (open_contests & full contest) list
+#   predictions
+# My strategy will be to try to update any active lists in memcache
+# with new items so that the lists are in sync with the added items.
+KEY_CACHE_SECONDS        = 1*24*60*60 # 1 day
+STOCK_CACHE_SECONDS      = 60 # Update every minute, at most
+CONTEST_CACHE_SECONDS    = 60 # The following could be larger or
+MYUSER_CACHE_SECONDS     = 60 # smaller. I'm not sure what is best.
+PREDICTION_CACHE_SECONDS = 60
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # we need to assign keys ourselves for Contests & such.
@@ -292,6 +303,20 @@ def authorize_contest(user,contest):
   user.put()
   update_myuser_memcache(user)
 
+def is_authorized_to_view(cur_user,contest):
+  authorized_to_view = cur_user is not None # must login (NEW?)
+  if contest.private:
+    owner_flag = users.get_current_user() == contest.owner.user
+    in_authorized_list = False
+    if cur_user:
+      in_authorized_list = contest.key() in cur_user.authorized_contest_list
+    authorized_to_view = (users.is_current_user_admin() or
+                          owner_flag or
+                          in_authorized_list)
+  logging.info("is_authorized_to_view private=%s allowed=%s" %
+               (contest.private,authorized_to_view))
+  return authorized_to_view
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 class Contest(db.Model):
   """
@@ -308,34 +333,23 @@ class Contest(db.Model):
   salt        = db.StringProperty()
   hashphrase  = db.StringProperty()
 
-# shared make_private routine
-def make_private(contest, private, passphrase):
-  contest.private = private
-  if contest.private:
-    logging.info('this is a private contest')
-    contest.salt       = str(int(random.randint(1000,10000)))
-    contest.hashphrase = myhash(passphrase+contest.salt)
-  else:
-    logging.info('this is a public contest')
-    contest.salt       = None
-    contest.hashphrase = None
-
 def get_new_contest_key():
   return get_new_key(Contest,'Contest')
 
-def get_contests(contests_query,contest_str):
+# be careful.  contest updates need to update this list too
+def get_contests(contests_query,contest_str,start_index=0):
   num = G_LIST_SIZE
   mckey = contest_str
   contests = memcache.get(mckey)
   if contests is not None:
     logging.info("get_%s from memcache"%(contest_str))
   else:
-    logging.info("get_%s from DB",contest_str)
-    contests = contests_query.fetch(num)
+    logging.info("get_%s from DB"%(contest_str))
+    contests = contests_query.fetch(1000) # HACK
     if not memcache.set(mckey,contests,CONTEST_CACHE_SECONDS):
       logging.error('get_%s memcache set failure'%(contest_str))
-  # what happens on none? if contests is not None:
-  return contests[:num] # in case cache has more
+  # only return num contests
+  return contests[start_index:start_index+num] # in case cache has more
 
 def get_open_contests():
   today = datetime_module.date.today()
@@ -351,6 +365,32 @@ def get_closed_contests():
                                   "ORDER BY close_date DESC", today),
                       "closed_contests")
 
+def get_all_contests(start_index):
+  return get_contests(db.GqlQuery("SELECT * FROM Contest " +
+                                  "ORDER BY close_date DESC"),
+                      "all_contests",
+                      start_index)
+
+def is_contest_at(index):
+  contests = get_all_contests(index)
+  is_contest = len(contests) > 0
+  logging.info("is_contest_at %d = %s"%(index,is_contest))
+  return is_contest
+
+def update_contest_list(contest_str, contest):
+  contests = memcache.get(contest_str)
+  if contests is not None:
+    close_dates = [v.close_date for v in contests]
+    i = bisect.bisect_left(close_dates,contest.close_date)
+    contests = contests[0:i] + [contest] + contests[i:]
+  else:
+    contests = [contest]
+  # FIXME remove this print loop
+  #for i,c in enumerate(contests):
+  #  logging.info("update_contest_list: %s %d %s"%(contest_str,i,c.key().id()))
+  if not memcache.set(contest_str,contests,CONTEST_CACHE_SECONDS):
+    logging.error('update_contest_list:%s memcache set failure'%(contest_str))
+
 def put_contest(contest):
   contest_id = str(contest.key().id())
   logging.info("put_contest:"+contest_id)
@@ -358,18 +398,48 @@ def put_contest(contest):
   mckey = "contest"+contest_id
   if not memcache.set(mckey,contest,CONTEST_CACHE_SECONDS):
     logging.error('put_contest:%s memcache set failure'%(mckey))
-  # also insert into the open_contests list
-  contests = memcache.get("open_contests")
-  if contests is not None:
-    close_dates = [v.close_date for v in contests]
-    i = bisect.bisect_left(close_dates,contest.close_date)
-    contests = contests[0:i] + [contest] + contests[i:]
+  # also insert into the open_contests & all_contests list.
+  # first, force the memcache to be populated
+  junk = get_open_contests()
+  junk = get_all_contests(0)
+  # then add the contest
+  update_contest_list("open_contests", contest)
+  update_contest_list("all_contests", contest)
+  # this does seem a bit odd to do this...
+  # keep thinking about this...
+
+def get_contest_by_id(contest_id):
+  mckey = "contest"+contest_id
+  contest = memcache.get(mckey)
+  if contest is not None:
+    logging.info("get_contest_by_id %s from memcache"%(contest_id))
   else:
-    contests = [contest]
-  for i,c in enumerate(contests):
-    logging.info("put_contest: %d %s"%(i,c.key().id()))
-  if not memcache.set("open_contests",contests,CONTEST_CACHE_SECONDS):
-    logging.error('put_contest:open_contests memcache set failure')
+    logging.info("get_contest_by_id %s from DB"%(contest_id))
+    contest = Contest.get_by_id(long(contest_id))
+    if ((contest is not None) and
+        (not memcache.set(mckey,contest,CONTEST_CACHE_SECONDS))):
+      logging.error('get_contest_by_id %s memcache set failure'%(contest_id))
+  return contest
+
+def add_contest(user,stock,close_date,is_private,passphrase):
+  logging.info('add_contest')
+  contest = Contest(key=get_new_contest_key())
+  contest.owner        = user
+  contest.stock        = stock
+  contest.close_date   = close_date
+  contest.final_value  = -1.0
+  contest.private      = is_private
+  if contest.private:
+    logging.info('this is a private contest')
+    contest.salt       = str(int(random.randint(1000,10000)))
+    contest.hashphrase = myhash(passphrase+contest.salt)
+  else:
+    logging.info('this is a public contest')
+    contest.salt       = None
+    contest.hashphrase = None
+  put_contest(contest)
+  return contest
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def finish_contest(contest, final_value):
@@ -379,11 +449,13 @@ def finish_contest(contest, final_value):
   logging.info("Closing contest %s %s" % ( contest.owner, contest.stock ))
   contest.final_value = final_value
   contest.put()
+  # FIXME put into memcache - both contest AND contests
   prediction_query = db.GqlQuery("SELECT * FROM Prediction WHERE contest = :1", contest)
   min_pred = 100000.0
   for prediction in prediction_query:
     prediction.winner = False
     prediction.put()
+    # FIXME put into memcache
     delta = abs(prediction.value - contest.final_value)
     if min_pred > delta:
       min_pred = delta
@@ -393,6 +465,14 @@ def finish_contest(contest, final_value):
       if min_pred == delta:
         prediction.winner = True
         prediction.put()
+        # FIXME prediction memcache
+
+def allow_contest_update(contest):
+   now = get_market_time_now()
+   contest_close_market_open = get_market_time_open(
+     contest.close_date.year, contest.close_date.month, contest.close_date.day
+     )
+   return now < contest_close_market_open
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 class Prediction(db.Model):
@@ -404,25 +484,47 @@ class Prediction(db.Model):
   value   = db.FloatProperty()
   winner  = db.BooleanProperty()
 
+def get_new_prediction_key():
+  return get_new_key(Prediction,'Prediction')
+
+def get_prediction(myuser,contest):
+  mckey = "prediction"+str(myuser.key().id())+str(contest.key().id())
+  prediction = memcache.get(mckey)
+  if prediction is not None:
+    logging.info("get_prediction %s %s from memcache"%(myuser.key().id(),
+                                                       contest.key().id()))
+  else:
+    logging.info("get_prediction %s %s from DB"%(myuser.key().id(),
+                                                 contest.key().id()))
+    prediction_query = db.GqlQuery(
+      "SELECT * FROM Prediction WHERE user = :1 AND contest = :2",
+      myuser, contest)
+    predictions = prediction_query.fetch(1)
+    if len(predictions) == 0:
+      prediction = None
+    else:
+      assert(len(predictions) == 1)
+      prediction = predictions[0]
+      if ((prediction is not None) and
+          (not memcache.set(mckey,prediction,PREDICTION_CACHE_SECONDS))):
+        logging.error('get_prediction memcache set failure')
+  return prediction
+
 def update_prediction(contest, value):
   cur_user = get_current_myuser()
-  prediction_query = db.GqlQuery("SELECT * FROM Prediction WHERE user = :1 AND contest = :2",
-                                 cur_user,
-                                 contest)
-  predictions = prediction_query.fetch(2)
-  if predictions:
-    assert(len(predictions) == 1)
-    logging.info('found previous prediction')
-    prediction = predictions[0]
-  else:
+  prediction = get_prediction(cur_user,contest)
+  if prediction is None:
     logging.info('adding prediction to db')
-    prediction = Prediction()
+    prediction = Prediction(key=get_new_prediction_key())
   prediction.user    = cur_user
   prediction.contest = contest
   prediction.value   = value
   prediction.winner  = False
   prediction.put()
-
+  mckey = "prediction"+str(cur_user.key().id())+str(contest.key().id())
+  if not memcache.set(mckey,prediction,PREDICTION_CACHE_SECONDS):
+    logging.error('update_prediction memcache set failure')
+  return prediction
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 class FauxPrediction(object):
