@@ -159,6 +159,8 @@ def get_stock_price_from_web(symbol):
   # add 'TEST' short-circuit stock that is always $12.0625/share
   if symbol == 'TEST':
     return 12.0625
+  if symbol == 'FAIL':
+    return "Unknown"
   # FIXME -- eventually google finance will go away?
   stock_price_url = "http://finance.google.com/finance/info?client=ig&q=%s" % (symbol)
   stock_price_result = urlfetch.fetch(stock_price_url)
@@ -194,6 +196,7 @@ def get_new_myuser_key():
 
 def get_myuser_from_user_id(user_id):
   mckey = "myuser_uid"+user_id
+  logging.info(mckey)
   myuser = memcache.get(mckey)
   if myuser is not None:
     logging.info("get_myuser_from_user_id %s from memcache"%(user_id))
@@ -250,6 +253,9 @@ def get_current_myuser():
   """return the MyUser for the current_user, adding if necessary"""
   if users.get_current_user() == None:
     return None
+  current_user = users.get_current_user()
+  current_user_id = users.get_current_user().user_id()
+  logging.info("current_user %s id %s"%(current_user,current_user_id))
   myuser = get_myuser_from_user_id(users.get_current_user().user_id())
   if myuser is None:
     logging.info('adding current user %s to db' %
