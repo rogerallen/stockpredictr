@@ -377,15 +377,18 @@ def is_contest_at(index):
   logging.info("is_contest_at %d = %s"%(index,is_contest))
   return is_contest
 
-def update_contest_list(contest_str, contest):
+def update_contest_list(contest_str, contest, reversed_list=False):
   contests = memcache.get(contest_str)
   if contests is not None:
     close_dates = [v.close_date for v in contests]
+    if reversed_list:
+      close_dates.reverse()
     i = bisect.bisect_left(close_dates,contest.close_date)
+    if reversed_list:
+      i = len(close_dates) - i
     contests = contests[0:i] + [contest] + contests[i:]
   else:
     contests = [contest]
-  # FIXME remove this print loop
   #for i,c in enumerate(contests):
   #  logging.info("update_contest_list: %s %d %s"%(contest_str,i,c.key().id()))
   if not memcache.set(contest_str,contests,CONTEST_CACHE_SECONDS):
@@ -404,7 +407,7 @@ def put_contest(contest):
   junk = get_all_contests(0)
   # then add the contest
   update_contest_list("open_contests", contest)
-  update_contest_list("all_contests", contest)
+  update_contest_list("all_contests", contest, True)
   # this does seem a bit odd to do this...
   # keep thinking about this...
 
@@ -450,6 +453,7 @@ def finish_contest(contest, final_value):
   contest.final_value = final_value
   contest.put()
   # FIXME put into memcache - both contest AND contests
+  # ??? or should we flush memcache for this rare event?
   prediction_query = db.GqlQuery("SELECT * FROM Prediction WHERE contest = :1", contest)
   min_pred = 100000.0
   for prediction in prediction_query:
@@ -487,6 +491,30 @@ class Prediction(db.Model):
 def get_new_prediction_key():
   return get_new_key(Prediction,'Prediction')
 
+# be careful.  contest updates need to update this list too
+def get_predictions(contest,start_index=0,num=G_LIST_SIZE):
+  "return all or 'num' predictions"
+  contest_id = str(contest.key().id())
+  mckey = "predictions"+contest_id
+  predictions = memcache.get(mckey)
+  if predictions is not None:
+    logging.info("get_predictions %s from memcache"%(contest_id))
+  else:
+    logging.info("get_predictions %s from DB"%(contest_id))
+    predictions_query = db.GqlQuery("SELECT * FROM Prediction " +
+                                    "WHERE contest = :1 " +
+                                    "ORDER BY value DESC",
+                                    contest)
+    predictions = predictions_query.fetch(1000) # HACK
+    if not memcache.set(mckey,predictions,PREDICTION_CACHE_SECONDS):
+      logging.error('get_predictions %s memcache set failure'%(contest_id))
+  # only return num predictions, unless num == 0
+  if num > 0:
+    return predictions[start_index:start_index+num] # in case cache has more
+  else:
+    assert(start_index==0)
+    return predictions
+
 def get_prediction(myuser,contest):
   mckey = "prediction"+str(myuser.key().id())+str(contest.key().id())
   prediction = memcache.get(mckey)
@@ -510,6 +538,26 @@ def get_prediction(myuser,contest):
         logging.error('get_prediction memcache set failure')
   return prediction
 
+def _update_predictions(contest,prediction):
+  "keep the predictions list memcache in sync with latest update"
+  predictions = get_predictions(contest)
+  # remove prediction if it is in the list currently
+  for i,p in enumerate(predictions):
+    if prediction.key() == p.key():
+      predictions = predictions[:i] + predictions[i+1:]
+      break
+  if predictions is not None:
+    prices = [p.value for p in predictions]
+    prices.reverse() # reverse for bisect
+    i = bisect.bisect_left(prices,prediction.value)
+    i = len(prices) - i # get index from end
+    predictions = predictions[0:i] + [prediction] + predictions[i:]
+  else:
+    predictions = [prediction]
+  mckey = "predictions"+str(contest.key().id())
+  if not memcache.set(mckey,predictions,CONTEST_CACHE_SECONDS):
+    logging.error('update_predictions:%s memcache set failure'%(mckey))
+
 def update_prediction(contest, value):
   cur_user = get_current_myuser()
   prediction = get_prediction(cur_user,contest)
@@ -524,6 +572,7 @@ def update_prediction(contest, value):
   mckey = "prediction"+str(cur_user.key().id())+str(contest.key().id())
   if not memcache.set(mckey,prediction,PREDICTION_CACHE_SECONDS):
     logging.error('update_prediction memcache set failure')
+  _update_predictions(contest, prediction)
   return prediction
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -539,3 +588,47 @@ class FauxPrediction(object):
     self.winner        = winner
     self.is_price      = is_price
     self.leader        = False
+
+
+def get_faux_predictions(contest,
+                         cur_index,
+                         num_predictions,
+                         stock_name,
+                         stock_price):
+  open_flag = contest.final_value < 0.0
+  faux_predictions = []
+  json_data = {}
+  # go through all predictions to find leader(s)
+  json_data["predictions"] = []
+  min_pred = 100000.0
+  if open_flag:
+    for (i,p) in enumerate(get_predictions(contest)):
+      min_pred = min(min_pred,abs(p.value - stock_price))
+  for (i,p) in enumerate(get_predictions(contest)):
+    if open_flag:
+      if min_pred == abs(p.value - stock_price):
+        p.leader = True
+    # only return data in current displayed range
+    # FIXME -- give hints in graph about next/prev data
+    if cur_index <= i < cur_index + num_predictions:
+      faux_predictions.append(FauxPrediction(
+          p.user.nickname, p.user.key().id(), p.value, p.winner,False
+          ))
+      json_data["predictions"] = [{
+          'name': p.user.nickname,
+          'value': get_price_str(p.value)[1:] # drop '$'
+          }] + json_data["predictions"]
+  # add stock price to list of "faux" predictions (in proper spot)
+  faux_predictions.append(FauxPrediction(
+      stock_name, 0, stock_price, False, True
+      ))
+  faux_predictions.sort(key=lambda p: p.value)
+  faux_predictions.reverse()
+  # add stock price to json_data
+  json_data["price"] = {
+    'name': contest.stock.symbol.replace(' ','\n'),
+    'value': get_price_str(stock_price)[1:] # drop '$'
+    }
+  json_data = simplejson.dumps(json_data)
+  return (faux_predictions,
+          json_data)

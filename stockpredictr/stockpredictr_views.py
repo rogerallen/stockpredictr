@@ -151,53 +151,20 @@ class HandleContest(webapp.RequestHandler):
       authorized_to_view = is_authorized_to_view(cur_user,contest)
       prediction_count = G_LIST_SIZE
       cur_index = arg2int(self.request.get('i'))
+      # see if we should allow the contest to be updated
+      can_update_flag = allow_contest_update(contest)
+      open_flag = contest.final_value < 0.0
       if authorized_to_view:
-        prediction_query = db.GqlQuery("SELECT * FROM Prediction WHERE contest = :1 ORDER BY value DESC",
-                                       contest)
-        predictions = prediction_query.fetch(prediction_count,cur_index)
         # "prev"/"next" here is referring to indices, but the flag eventually
         # refers to the values of the predictions which is reverse sorted
         # so "prev"=="higher" and "next"=="lower".  A bit confusing, so be
         # careful.
         prev_index = max(0,cur_index-prediction_count)
-        prev_predictions_flag = prev_index < cur_index
-        next_index = cur_index+len(predictions)
-        # if there is a next_prediction, it will be at cur_index+pred_count
-        # later, we verify there actually is one here... (bugfix)
-        next_predictions_flag = next_index == cur_index+prediction_count
-        # help figure out current leader.  get predictions just outside the fetch
-        # set huge values to make sure they never win
-        prediction_prev = FauxPrediction(
-            'prev', -1, -1e6, False, False
-            )
-        if prev_predictions_flag:
-          prediction_prev = prediction_query.fetch(1,cur_index-1)[0]
-        prediction_next = FauxPrediction(
-            'next', -1, 1e6, False, False
-            )
-        if next_predictions_flag:
-          try:
-            prediction_next = prediction_query.fetch(1,cur_index+prediction_count)[0]
-          except IndexError:
-            # there is no next prediction, so reset this flag & keep the FauxPrediction
-            next_predictions_flag = False
+        prev_predictions_flag = ((prev_index < cur_index) and
+                                 len(get_predictions(contest,prev_index,1)) == 1)
+        next_index = cur_index+prediction_count # FIXME? difference
+        next_predictions_flag = len(get_predictions(contest,next_index,1)) == 1
 
-        # create a list that can get the stock price inserted
-        faux_predictions = []
-        json_data = {}
-        json_data["predictions"] = []
-        for p in predictions:
-          faux_predictions.append(FauxPrediction(
-            p.user.nickname, p.user.key().id(), p.value, p.winner,False
-            ))
-          json_data["predictions"] = [{
-              'name': p.user.nickname,
-              'value': get_price_str(p.value)[1:] # drop '$'
-              }] + json_data["predictions"]
-
-        # see if we should allow the contest to be updated
-        can_update_flag = allow_contest_update(contest)
-        open_flag = contest.final_value < 0.0
         stock_name = contest.stock.symbol
         if open_flag:
           stock_name += " Current Price"
@@ -206,42 +173,22 @@ class HandleContest(webapp.RequestHandler):
           stock_name += " Final Price"
           stock_price = contest.final_value
 
-        json_data["price"] = {
-          'name': contest.stock.symbol.replace(' ','\n'),
-          'value': get_price_str(stock_price)[1:] # drop '$'
-          }
-
-        # find the current leader(s)
-        # include next values to allow them to be picked as leader
-        # but not be displyed in main list
-        if open_flag:
-          min_pred = 100000.0
-          for prediction in [prediction_prev]+faux_predictions+[prediction_next]:
-            delta = abs(prediction.value - stock_price)
-            if min_pred > delta:
-              min_pred = delta
-          for prediction in [prediction_prev]+faux_predictions+[prediction_next]:
-            delta = abs(prediction.value - stock_price)
-            if min_pred == delta:
-              prediction.leader = True
-
-        # add stock price to list of "faux" predictions
-        faux_predictions.append(FauxPrediction(
-          stock_name, 0, stock_price, False, True
-          ))
-        faux_predictions.sort(key=lambda p: p.value)
-        faux_predictions.reverse()
-
-        json_data = simplejson.dumps(json_data)
-
+        # get faux_data for template & json_data for graph of contest.
+        # Will have stock price & .winner/.leader labeled
+        (faux_predictions,
+         json_data) = get_faux_predictions(contest,
+                                           cur_index,
+                                           prediction_count,
+                                           stock_name,
+                                           stock_price)
       else:
-        faux_predictions      = []
         can_update_flag       = False
         open_flag             = False
-        prev_index            = max(0,cur_index-prediction_count)
+        prev_index            = 0
         prev_predictions_flag = False
-        next_index            = cur_index+prediction_count
+        next_index            = 0
         next_predictions_flag = False
+        faux_predictions      = []
         json_data             = '{}'
 
       template_values.update({
