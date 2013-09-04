@@ -15,7 +15,7 @@
         var s = document.getElementsByTagName('script')[0];
         s.parentNode.insertBefore(ga, s);
       })();
-    </script>  
+    </script>
   </head>
 
   <body>
@@ -56,7 +56,7 @@
 
               </div> <!-- end #entry -->
             </div> <!-- end #post -->
-              
+
             <div class="post">
               <h2 class="title">Create A New Contest</h2>
                 {% if logged_in_flag %}
@@ -64,12 +64,12 @@
                   {% if error_flag %}
                   <div class="post">
                     <div class="error"><b>ERROR: {% autoescape off %}{{error_message}}{% endautoescape %}</b></div>
-                  </div>         
+                  </div>
                   {% endif %}
                   <div id="search" class="entry">
                     <form action="/" method="post">
                       <div class="entry">
-                        Stock Symbol: 
+                        Stock Symbol:
                         <input type="text" name="symbol" size="7"
                                maxlength="7" value={{ form_symbol }}>
                         Date: YYYY/MM/DD
@@ -105,7 +105,7 @@
               {% else %}
                 <div class="post">
                   <div class="entry"><i><a href="{{ login_url }}">Login</a> to create a contest.</i></div>
-                </div>         
+                </div>
               {% endif %}
             </div> <!-- end #post -->
 
@@ -115,13 +115,10 @@
                 <ul>
                   {% for contest in open_contests %}
                     <li> <a href="contest/{{contest.key.id}}">
-                        {{ contest.stock.symbol }} - 
-                        {{ contest.close_date|date:"Y-m-d" }}</a> -
+                        {{ contest.stock_symbol }} -
+                        {{ contest.close_date|date:"Y-m-d" }}</a>
                         {% if contest.private %}
                           [private]
-                        {% else %}
-                          <a href="user/{{contest.owner.key.id}}">
-                            {{ contest.owner.nickname }}</a>
                         {% endif %}
                     </li>
                   {% endfor %}
@@ -137,7 +134,7 @@
                 <ul>
                   {% for user in users %}
                     <li> <a href="user/{{user.key.id}}">
-                        {{ user.nickname }} - 
+                        {{ user.nickname }} -
                         {{ user.win_pct }}%</a>
                     </li>
                   {% endfor %}
@@ -151,13 +148,10 @@
                 <ul>
                   {% for contest in closed_contests %}
                     <li> <a href="contest/{{contest.key.id}}">
-                        {{ contest.stock.symbol }} - 
-                        {{ contest.close_date|date:"Y-m-d" }}</a> -
+                        {{ contest.stock_symbol }} -
+                        {{ contest.close_date|date:"Y-m-d" }}</a>
                         {% if contest.private %}
                           [private]
-                        {% else %}
-                          <a href="user/{{contest.owner.key.id}}">
-                            {{ contest.owner.nickname }}</a>
                         {% endif %}
                     </li>
                   {% endfor %}

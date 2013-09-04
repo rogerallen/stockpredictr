@@ -145,7 +145,8 @@ class HandleContest(webapp.RequestHandler):
       if contest is None:
         raise ValueError('no contest by that id')
       # check for privacy and authorization
-      owner_flag = users.get_current_user() == contest.owner.user
+      owner = get_myuser_from_myuser_id(str(contest.owner_id))
+      owner_flag = users.get_current_user() == owner.user
       stock_price = None
       cur_user = template_values['cur_user']
       authorized_to_view = is_authorized_to_view(cur_user,contest)
@@ -165,10 +166,10 @@ class HandleContest(webapp.RequestHandler):
         next_index = cur_index+prediction_count # FIXME? difference
         next_predictions_flag = len(get_predictions(contest,next_index,1)) == 1
 
-        stock_name = contest.stock.symbol
+        stock_name = contest.stock_symbol
         if open_flag:
           stock_name += " Current Price"
-          stock_price = get_stock_price(contest.stock.symbol)
+          stock_price = get_stock_price(contest.stock_symbol)
         else:
           stock_name += " Final Price"
           stock_price = contest.final_value
@@ -194,6 +195,7 @@ class HandleContest(webapp.RequestHandler):
       template_values.update({
         'authorized':              authorized_to_view,
         'contest':                 contest,
+        'owner':                   owner,
         'predictions':             faux_predictions,
         'can_update_flag':         can_update_flag,
         'owner_flag':              owner_flag,
@@ -336,11 +338,9 @@ class HandleUser(webapp.RequestHandler):
       except AttributeError:
         authorized_to_view = False
         authorized_to_edit = False
-      # NOTE the use of reference properties instead of a query
-      # AND they are sorted by contest close date!  (yay)
-      predictions = sorted(the_user.prediction_set,key=lambda obj: obj.contest.close_date)
-      closed_predictions = filter(lambda obj: obj.contest.final_value >= 0.0, predictions)
-      open_predictions = filter(lambda obj: obj.contest.final_value < 0.0, predictions)
+      predictions = get_myuser_predictions(the_user)
+      closed_predictions = filter(lambda obj: get_contest_by_id(obj.contest_id).final_value >= 0.0, predictions)
+      open_predictions = filter(lambda obj: get_contest_by_id(obj.contest_id).final_value < 0.0, predictions)
       template_values.update({
         'the_user':           the_user,
         'closed_predictions': closed_predictions,
@@ -380,7 +380,7 @@ class FinishAnyContests(webapp.RequestHandler):
     for contest in contests_query:
       # only update contests that need a final value to be added
       if contest.final_value < 0.0:
-        final_value = get_stock_price(contest.stock.symbol)
+        final_value = get_stock_price(contest.stock_symbol)
         finish_contest(contest,final_value)
     # now get each person's win/loss record straight
     update_all_users_winloss()

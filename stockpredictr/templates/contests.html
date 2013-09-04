@@ -15,7 +15,7 @@
         var s = document.getElementsByTagName('script')[0];
         s.parentNode.insertBefore(ga, s);
       })();
-    </script>  
+    </script>
   </head>
 
   <body>
@@ -51,13 +51,10 @@
                 <ul>
                   {% for contest in contests %}
                     <li> <a href="contest/{{contest.key.id}}">
-                        {{ contest.stock.symbol }} - 
-                        {{ contest.close_date|date:"Y-m-d" }}</a> -
+                        {{ contest.stock_symbol }} -
+                        {{ contest.close_date|date:"Y-m-d" }}</a>
                       {% if contest.private %}
                         [private]
-                      {% else %}
-                        <a href="user/{{contest.owner.key.id}}">
-                          {{ contest.owner.nickname }}</a>
                       {% endif %}
                     </li>
                   {% endfor %}

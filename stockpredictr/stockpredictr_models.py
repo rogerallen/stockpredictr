@@ -312,7 +312,8 @@ def authorize_contest(user,contest):
 def is_authorized_to_view(cur_user,contest):
   authorized_to_view = cur_user is not None # must login (NEW?)
   if contest.private:
-    owner_flag = users.get_current_user() == contest.owner.user
+    owner = get_myuser_from_myuser_id(str(contest.owner_id))
+    owner_flag = users.get_current_user().user_id() == owner.user.user_id()
     in_authorized_list = False
     if cur_user:
       in_authorized_list = contest.key() in cur_user.authorized_contest_list
@@ -331,13 +332,13 @@ class Contest(db.Model):
   salt is a random number that we use for defeating rainbow attacks (unlikely!)
   hashphrase is the hashed result of passphrase + salt
   """
-  owner       = db.ReferenceProperty(MyUser)
-  stock       = db.ReferenceProperty(Stock)
-  close_date  = db.DateProperty()
-  final_value = db.FloatProperty()
-  private     = db.BooleanProperty()
-  salt        = db.StringProperty()
-  hashphrase  = db.StringProperty()
+  owner_id     = db.IntegerProperty() # db.ReferenceProperty(MyUser) memcache fix
+  stock_symbol = db.StringProperty()  # db.ReferenceProperty(Stock) memcache fix
+  close_date   = db.DateProperty()
+  final_value  = db.FloatProperty()
+  private      = db.BooleanProperty()
+  salt         = db.StringProperty()
+  hashphrase   = db.StringProperty()
 
 def get_new_contest_key():
   return get_new_key(Contest,'Contest')
@@ -433,8 +434,8 @@ def get_contest_by_id(contest_id):
 def add_contest(user,stock,close_date,is_private,passphrase):
   logging.info('add_contest')
   contest = Contest(key=get_new_contest_key())
-  contest.owner        = user
-  contest.stock        = stock
+  contest.owner_id     = user.key().id()
+  contest.stock_symbol = stock.symbol
   contest.close_date   = close_date
   contest.final_value  = -1.0
   contest.private      = is_private
@@ -455,12 +456,12 @@ def finish_contest(contest, final_value):
   """
   Finalize a contest's final_value and prediction winner
   """
-  logging.info("Closing contest %s %s" % ( contest.owner, contest.stock ))
+  logging.info("Closing contest %s %s" % ( contest.owner_id, contest.stock_symbol ))
   contest.final_value = final_value
   contest.put()
   # FIXME put into memcache - both contest AND contests
   # ??? or should we flush memcache for this rare event?
-  prediction_query = db.GqlQuery("SELECT * FROM Prediction WHERE contest = :1", contest)
+  prediction_query = db.GqlQuery("SELECT * FROM Prediction WHERE contest_id = :1", contest.key().id())
   min_pred = 100000.0
   for prediction in prediction_query:
     prediction.winner = False
@@ -489,10 +490,10 @@ class Prediction(db.Model):
   """
   Table of Predictions - one per user per contest.  updates allowed.
   """
-  user    = db.ReferenceProperty(MyUser)
-  contest = db.ReferenceProperty(Contest)
-  value   = db.FloatProperty()
-  winner  = db.BooleanProperty()
+  user_id    = db.IntegerProperty() # db.ReferenceProperty(MyUser) memcache fix
+  contest_id = db.IntegerProperty() # db.ReferenceProperty(Contest) memcache fix
+  value      = db.FloatProperty()
+  winner     = db.BooleanProperty()
 
 def get_new_prediction_key():
   return get_new_key(Prediction,'Prediction')
@@ -508,9 +509,9 @@ def get_predictions(contest,start_index=0,num=G_LIST_SIZE):
   else:
     logging.info("get_predictions %s from DB"%(contest_id))
     predictions_query = db.GqlQuery("SELECT * FROM Prediction " +
-                                    "WHERE contest = :1 " +
+                                    "WHERE contest_id = :1 " +
                                     "ORDER BY value DESC",
-                                    contest)
+                                    contest_id)
     predictions = predictions_query.fetch(1000) # HACK
     if not memcache.set(mckey,predictions,PREDICTION_CACHE_SECONDS):
       logging.error('get_predictions %s memcache set failure'%(contest_id))
@@ -520,6 +521,14 @@ def get_predictions(contest,start_index=0,num=G_LIST_SIZE):
   else:
     assert(start_index==0)
     return predictions
+
+def get_myuser_predictions(myuser):
+  # I'm not going to worry about caching user predictions
+  prediction_query = db.GqlQuery(
+    "SELECT * FROM Prediction WHERE user_id = :1 ORDER BY contest_id DESC",
+    myuser.key().id())
+  predictions = prediction_query.fetch(1000) # HACK
+  return predictions
 
 def get_prediction(myuser,contest):
   mckey = "prediction"+str(myuser.key().id())+str(contest.key().id())
@@ -531,8 +540,8 @@ def get_prediction(myuser,contest):
     logging.info("get_prediction %s %s from DB"%(myuser.key().id(),
                                                  contest.key().id()))
     prediction_query = db.GqlQuery(
-      "SELECT * FROM Prediction WHERE user = :1 AND contest = :2",
-      myuser, contest)
+      "SELECT * FROM Prediction WHERE user_id = :1 AND contest_id = :2",
+      myuser.key().id(), contest.key().id())
     predictions = prediction_query.fetch(1)
     if len(predictions) == 0:
       prediction = None
@@ -570,8 +579,8 @@ def update_prediction(contest, value):
   if prediction is None:
     logging.info('adding prediction to db')
     prediction = Prediction(key=get_new_prediction_key())
-  prediction.user    = cur_user
-  prediction.contest = contest
+  prediction.user_id    = cur_user.key().id()
+  prediction.contest_id = contest.key().id()
   prediction.value   = value
   prediction.winner  = False
   prediction.put()
@@ -586,15 +595,14 @@ class FauxPrediction(object):
   """
   a version of a Prediction we use just for the webpage presentation
   """
-  def __init__(self,user_nickname,user_id,value,winner,is_price):
+  def __init__(self,user_nickname,user_id,value,winner,leader,is_price):
     self.user_nickname = user_nickname
     self.user_id       = user_id
     self.value         = value
     self.value_str     = get_price_str(value)
     self.winner        = winner
+    self.leader        = leader
     self.is_price      = is_price
-    self.leader        = False
-
 
 def get_faux_predictions(contest,
                          cur_index,
@@ -611,28 +619,30 @@ def get_faux_predictions(contest,
     for (i,p) in enumerate(get_predictions(contest)):
       min_pred = min(min_pred,abs(p.value - stock_price))
   for (i,p) in enumerate(get_predictions(contest)):
+    is_leader = False
     if open_flag:
       if min_pred == abs(p.value - stock_price):
-        p.leader = True
+        is_leader = True
     # only return data in current displayed range
     # FIXME -- give hints in graph about next/prev data
     if cur_index <= i < cur_index + num_predictions:
+      user = get_myuser_from_myuser_id(str(p.user_id))
       faux_predictions.append(FauxPrediction(
-          p.user.nickname, p.user.key().id(), p.value, p.winner,False
+          user.nickname, user.key().id(), p.value, p.winner, is_leader, False
           ))
       json_data["predictions"] = [{
-          'name': p.user.nickname,
+          'name': user.nickname,
           'value': get_price_str(p.value)[1:] # drop '$'
           }] + json_data["predictions"]
   # add stock price to list of "faux" predictions (in proper spot)
   faux_predictions.append(FauxPrediction(
-      stock_name, 0, stock_price, False, True
+      stock_name, 0, stock_price, False, False, True
       ))
   faux_predictions.sort(key=lambda p: p.value)
   faux_predictions.reverse()
   # add stock price to json_data
   json_data["price"] = {
-    'name': contest.stock.symbol.replace(' ','\n'),
+    'name': contest.stock_symbol.replace(' ','\n'),
     'value': get_price_str(stock_price)[1:] # drop '$'
     }
   json_data = simplejson.dumps(json_data)
