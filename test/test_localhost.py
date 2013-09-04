@@ -376,7 +376,7 @@ class TestBasics(unittest.TestCase):
         self.checkEqual(the_page_lines, gold_page_lines)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    def xxx033ContestMakeBadPrediction(self):
+    def test033ContestMakeBadPrediction(self):
         (the_page_lines, gold_page_lines) = get_comparison(
             SITE+'contest/21',
             page_name(self.id()),
@@ -388,7 +388,7 @@ class TestBasics(unittest.TestCase):
         self.checkEqual(the_page_lines, gold_page_lines)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    def xxx0330ContestMakeNoUserPrediction(self):
+    def test0330ContestMakeNoUserPrediction(self):
         (the_page_lines, gold_page_lines) = get_comparison(
             SITE+'contest/21',
             page_name(self.id()),
@@ -397,7 +397,7 @@ class TestBasics(unittest.TestCase):
         self.checkEqual(the_page_lines, gold_page_lines)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    def xxx034ContestFinish(self):
+    def test034ContestFinish(self):
         (the_page_lines, gold_page_lines) = get_comparison(
             SITE+'contest/21',
             page_name(self.id()),
@@ -409,7 +409,7 @@ class TestBasics(unittest.TestCase):
         self.checkEqual(the_page_lines, gold_page_lines)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    def xxx035ContestFinishPoorly(self):
+    def test035ContestFinishPoorly(self):
         (the_page_lines, gold_page_lines) = get_comparison(
             SITE+'contest/21',
             page_name(self.id()),
