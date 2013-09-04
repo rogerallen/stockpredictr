@@ -458,25 +458,24 @@ def finish_contest(contest, final_value):
   """
   logging.info("Closing contest %s %s" % ( contest.owner_id, contest.stock_symbol ))
   contest.final_value = final_value
-  contest.put()
-  # FIXME put into memcache - both contest AND contests
-  # ??? or should we flush memcache for this rare event?
-  prediction_query = db.GqlQuery("SELECT * FROM Prediction WHERE contest_id = :1", contest.key().id())
+  put_contest(contest)
   min_pred = 100000.0
-  for prediction in prediction_query:
-    prediction.winner = False
-    prediction.put()
-    # FIXME put into memcache
+  predictions = get_predictions(contest)
+  for prediction in predictions:
     delta = abs(prediction.value - contest.final_value)
     if min_pred > delta:
       min_pred = delta
   if contest.final_value >= 0.0:
-    for prediction in prediction_query:
+    for prediction in predictions:
       delta = abs(prediction.value - contest.final_value)
-      if min_pred == delta:
-        prediction.winner = True
-        prediction.put()
-        # FIXME prediction memcache
+      prediction.winner = (min_pred == delta)
+      prediction.put()
+      mckey = "prediction"+str(prediction.user_id)+str(contest.key().id())
+      if not memcache.set(mckey,prediction,PREDICTION_CACHE_SECONDS):
+        logging.error('finish_contest: %s memcache set failure'%(mckey))
+  mckey = "predictions"+str(contest.key().id())
+  if not memcache.set(mckey,predictions,CONTEST_CACHE_SECONDS):
+    logging.error('finish_contest: %s memcache set failure'%(mckey))
 
 def allow_contest_update(contest):
    now = get_market_time_now()
