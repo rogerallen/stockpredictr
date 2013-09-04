@@ -13,6 +13,7 @@
 # when they are correct, copying them to the 'gold' directory.
 
 import json
+import md5
 import re
 import sys
 import unittest
@@ -25,8 +26,6 @@ from stockpredictr_config import G_LIST_SIZE
 GILD = False
 # global for the sitename.  put in config file someday
 SITE = 'http://localhost:8080/'
-# TODO this ID may only work for me.  prob should be in config file
-COOKIE_ID = '185804764220139124118'
 
 # FIXME
 FUTYEAR = '2015'
@@ -35,13 +34,16 @@ FUTYEAR = '2015'
 USERAGENT = "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.6; en-US; rv:1.9.2.3) Gecko/20100401 Firefox/3.6.3,gzip(gfe)"
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def login_cookie(email,admin_flag,cookie_id):
+def login_cookie(email,admin_flag):#,cookie_id):
     """ return string in this format
       dev_appserver_login="test@example.com:True:185804764220139124119"
     """
     login_str = email+':'
     login_str += str(admin_flag)+':'
-    login_str += cookie_id
+    # found in https://github.com/avsm/py-shelf/blob/master/dev_appserver_login.py
+    user_id_digest = md5.new(email.lower()).digest()
+    user_id = '1' + ''.join(['%02d' % ord(x) for x in user_id_digest])[:20]
+    login_str += user_id #cookie_id
     cookie_str = 'dev_appserver_login="'+login_str+'"'
     return cookie_str
 
@@ -49,7 +51,7 @@ def user_cookie(index=None,admin_flag=False):
     istr=""
     if index:
         istr=str(index)
-    return login_cookie('test'+istr+'@example.com',admin_flag,COOKIE_ID)
+    return login_cookie('test'+istr+'@example.com',admin_flag)#,COOKIE_ID)
 
 def admin_cookie(index=None):
     return user_cookie(index,True)
@@ -276,12 +278,12 @@ class TestBasics(unittest.TestCase):
         self.checkEqual(the_page_lines, gold_page_lines)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    def xxx022UserWithOtherLogin(self):
+    def test022UserWithOtherLogin(self):
         (the_page_lines, gold_page_lines) = get_comparison(
             SITE+'user/1',
             page_name(self.id()),
             headers={'User-Agent': USERAGENT,
-                     'Cookie':user_cookie(2)  # FIXME currently fails
+                     'Cookie':user_cookie(2)
                      }
             )
         self.checkEqual(the_page_lines, gold_page_lines)
@@ -295,7 +297,7 @@ class TestBasics(unittest.TestCase):
         self.checkEqual(the_page_lines, gold_page_lines)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    def xxx023UserWithOtherLoginTryChangeNickname(self):
+    def test023UserWithOtherLoginTryChangeNickname(self):
         (the_page_lines, gold_page_lines) = get_comparison(
             SITE+'user/1',
             page_name(self.id()),
@@ -362,13 +364,13 @@ class TestBasics(unittest.TestCase):
         self.checkEqual(the_page_lines, gold_page_lines)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    def xxx032ContestMakePrediction2(self):
+    def test032ContestMakePrediction2(self):
         (the_page_lines, gold_page_lines) = get_comparison(
             SITE+'contest/21',
             page_name(self.id()),
             values={'prediction':'13'},
             headers={'User-Agent': USERAGENT,
-                     'Cookie': user_cookie(2) # FIXME
+                     'Cookie': user_cookie(2)
                      }
             )
         self.checkEqual(the_page_lines, gold_page_lines)
@@ -380,7 +382,7 @@ class TestBasics(unittest.TestCase):
             page_name(self.id()),
             values={'prediction':'1xz3'},
             headers={'User-Agent': USERAGENT,
-                     'Cookie': user_cookie(2) # FIXME
+                     'Cookie': user_cookie(2)
                      }
             )
         self.checkEqual(the_page_lines, gold_page_lines)
