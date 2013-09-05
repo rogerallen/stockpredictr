@@ -456,7 +456,7 @@ def finish_contest(contest, final_value):
   """
   Finalize a contest's final_value and prediction winner
   """
-  logging.info("Closing contest %s %s" % ( contest.owner_id, contest.stock_symbol ))
+  logging.info("Closing contest %s %s fv=%s" % (contest.owner_id, contest.stock_symbol, final_value))
   contest.final_value = final_value
   put_contest(contest)
   min_pred = 100000.0
@@ -465,14 +465,13 @@ def finish_contest(contest, final_value):
     delta = abs(prediction.value - contest.final_value)
     if min_pred > delta:
       min_pred = delta
-  if contest.final_value >= 0.0:
-    for prediction in predictions:
-      delta = abs(prediction.value - contest.final_value)
-      prediction.winner = (min_pred == delta)
-      prediction.put()
-      mckey = "prediction"+str(prediction.user_id)+str(contest.key().id())
-      if not memcache.set(mckey,prediction,PREDICTION_CACHE_SECONDS):
-        logging.error('finish_contest: %s memcache set failure'%(mckey))
+  for prediction in predictions:
+    delta = abs(prediction.value - contest.final_value)
+    prediction.winner = (final_value > 0) and (min_pred == delta)
+    prediction.put()
+    mckey = "prediction"+str(prediction.user_id)+str(contest.key().id())
+    if not memcache.set(mckey,prediction,PREDICTION_CACHE_SECONDS):
+      logging.error('finish_contest: %s memcache set failure'%(mckey))
   mckey = "predictions"+str(contest.key().id())
   if not memcache.set(mckey,predictions,CONTEST_CACHE_SECONDS):
     logging.error('finish_contest: %s memcache set failure'%(mckey))

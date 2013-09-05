@@ -421,7 +421,7 @@ class TestBasics(unittest.TestCase):
         self.checkEqual(the_page_lines, gold_page_lines)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    def xxx036ContestReopen(self):
+    def test036ContestReopen(self):
         (the_page_lines, gold_page_lines) = get_comparison(
             SITE+'contest/21',
             page_name(self.id()),
