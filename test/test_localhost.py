@@ -13,6 +13,7 @@
 # when they are correct, copying them to the 'gold' directory.
 
 import json
+import logging
 import md5
 import re
 import sys
@@ -433,9 +434,9 @@ class TestBasics(unittest.TestCase):
         self.checkEqual(the_page_lines, gold_page_lines)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    def xxx037ContestPrivateNotAllowed(self):
+    def test037ContestPrivateNotAllowed(self):
         (the_page_lines, gold_page_lines) = get_comparison(
-            SITE+'contest/4',
+            SITE+'contest/22',
             page_name(self.id()),
             headers={'User-Agent': USERAGENT,
                      'Cookie':user_cookie(2)
@@ -444,9 +445,10 @@ class TestBasics(unittest.TestCase):
         self.checkEqual(the_page_lines, gold_page_lines)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    def xxx038ContestPrivateGiveBadPassphrase(self):
+    def test038ContestPrivateGiveBadPassphrase(self):
+        logging.info("test038ContestPrivateGiveBadPassphrase")
         (the_page_lines, gold_page_lines) = get_comparison(
-            SITE+'contest/4',
+            SITE+'contest/22',
             page_name(self.id()),
             values={'passphrase':'blahblah'},
             headers={'User-Agent': USERAGENT,
@@ -456,18 +458,20 @@ class TestBasics(unittest.TestCase):
         self.checkEqual(the_page_lines, gold_page_lines)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    def xxx038aContestPrivateNoUser(self):
+    def test038aContestPrivateNoUser(self):
+        logging.info("test038aContestPrivateNoUser")
         (the_page_lines, gold_page_lines) = get_comparison(
-            SITE+'contest/4',
+            SITE+'contest/22',
             page_name(self.id()),
             values={'passphrase':'password'},
             )
         self.checkEqual(the_page_lines, gold_page_lines)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    def xxx039ContestPrivateGiveGoodPassphrase(self):
+    def test039ContestPrivateGiveGoodPassphrase(self):
+        logging.info("test039ContestPrivateGiveGoodPassphrase")
         (the_page_lines, gold_page_lines) = get_comparison(
-            SITE+'contest/4',
+            SITE+'contest/22',
             page_name(self.id()),
             values={'passphrase':'password'},
             headers={'User-Agent': USERAGENT,

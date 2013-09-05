@@ -313,7 +313,10 @@ def is_authorized_to_view(cur_user,contest):
   authorized_to_view = cur_user is not None # must login (NEW?)
   if contest.private:
     owner = get_myuser_from_myuser_id(str(contest.owner_id))
-    owner_flag = users.get_current_user().user_id() == owner.user.user_id()
+    try:
+      owner_flag = users.get_current_user().user_id() == owner.user.user_id()
+    except AttributeError:
+      owner_flag = False
     in_authorized_list = False
     if cur_user:
       in_authorized_list = contest.key() in cur_user.authorized_contest_list
