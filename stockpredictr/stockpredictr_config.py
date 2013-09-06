@@ -18,7 +18,7 @@
 # 02110-1301, USA.
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-G_LIST_SIZE=50
+G_LIST_SIZE=25
 
 g_footer = """
 <p>Copyright (c) 2009-2013 Roger Allen. All rights reserved.

@@ -481,9 +481,9 @@ class TestBasics(unittest.TestCase):
         self.checkEqual(the_page_lines, gold_page_lines)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    def xxx03aContestPrivateMakePrediction(self):
+    def test03aContestPrivateMakePrediction(self):
         (the_page_lines, gold_page_lines) = get_comparison(
-            SITE+'contest/4',
+            SITE+'contest/22',
             page_name(self.id()),
             values={'prediction':'13'},
             headers={'User-Agent': USERAGENT,
@@ -493,9 +493,9 @@ class TestBasics(unittest.TestCase):
         self.checkEqual(the_page_lines, gold_page_lines)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    def xxx03bContestPrivateChangePrediction(self):
+    def test03bContestPrivateChangePrediction(self):
         (the_page_lines, gold_page_lines) = get_comparison(
-            SITE+'contest/4',
+            SITE+'contest/22',
             page_name(self.id()),
             values={'prediction':'12.5'},
             headers={'User-Agent': USERAGENT,
@@ -505,7 +505,7 @@ class TestBasics(unittest.TestCase):
         self.checkEqual(the_page_lines, gold_page_lines)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    def xxx03cContestCheckStockPrices(self):
+    def test03cContestCheckStockPrices(self):
         for (i,v) in enumerate(['13.0001','1','11.1','12.52','13.99999999999999']):
             fetch_url(
                 SITE+'contest/21',
@@ -520,7 +520,7 @@ class TestBasics(unittest.TestCase):
         self.checkEqual(the_page_lines, gold_page_lines)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    def xxx03dContestExactlyOnePageOfPredictions(self):
+    def test03dContestExactlyOnePageOfPredictions(self):
         num_pred = G_LIST_SIZE
         for (i,v) in enumerate(range(num_pred)):
             fetch_url(
