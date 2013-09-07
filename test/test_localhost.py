@@ -124,7 +124,6 @@ class TestBasics(unittest.TestCase):
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def test000RootNoLogin(self):
-        print >>sys.stderr, "test basics:",
         (the_page_lines, gold_page_lines) = get_comparison(
            SITE,
            page_name(self.id())
@@ -257,6 +256,17 @@ class TestBasics(unittest.TestCase):
         self.checkEqual(the_page_lines, gold_page_lines)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    def test01zRootWithLogin(self):
+        (the_page_lines, gold_page_lines) = get_comparison(
+            SITE,
+            page_name(self.id()),
+            headers={'User-Agent': USERAGENT,
+                     'Cookie':user_cookie()
+                     }
+            )
+        self.checkEqual(the_page_lines, gold_page_lines)
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def test020UserWithLogin(self):
         (the_page_lines, gold_page_lines) = get_comparison(
             SITE+'user/1',
@@ -334,6 +344,17 @@ class TestBasics(unittest.TestCase):
         self.checkEqual(the_page_lines, gold_page_lines)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    def test02zRootWithLogin(self):
+        (the_page_lines, gold_page_lines) = get_comparison(
+            SITE,
+            page_name(self.id()),
+            headers={'User-Agent': USERAGENT,
+                     'Cookie':user_cookie()
+                     }
+            )
+        self.checkEqual(the_page_lines, gold_page_lines)
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def test030ContestBadUrl(self):
         (the_page_lines, gold_page_lines) = get_comparison(
             SITE+'contest/1w2',
@@ -398,6 +419,17 @@ class TestBasics(unittest.TestCase):
         self.checkEqual(the_page_lines, gold_page_lines)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    def test033zRootWithLogin(self):
+        (the_page_lines, gold_page_lines) = get_comparison(
+            SITE,
+            page_name(self.id()),
+            headers={'User-Agent': USERAGENT,
+                     'Cookie':user_cookie()
+                     }
+            )
+        self.checkEqual(the_page_lines, gold_page_lines)
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def test034ContestFinish(self):
         (the_page_lines, gold_page_lines) = get_comparison(
             SITE+'contest/21',
@@ -405,6 +437,17 @@ class TestBasics(unittest.TestCase):
             values={'final_value':'12.0625'},
             headers={'User-Agent': USERAGENT,
                      'Cookie': user_cookie()
+                     }
+            )
+        self.checkEqual(the_page_lines, gold_page_lines)
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    def test034zRootWithLogin(self):
+        (the_page_lines, gold_page_lines) = get_comparison(
+            SITE,
+            page_name(self.id()),
+            headers={'User-Agent': USERAGENT,
+                     'Cookie':user_cookie()
                      }
             )
         self.checkEqual(the_page_lines, gold_page_lines)
@@ -432,6 +475,18 @@ class TestBasics(unittest.TestCase):
                      }
             )
         self.checkEqual(the_page_lines, gold_page_lines)
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    def test036zRootWithLogin(self):
+        (the_page_lines, gold_page_lines) = get_comparison(
+            SITE,
+            page_name(self.id()),
+            headers={'User-Agent': USERAGENT,
+                     'Cookie':user_cookie()
+                     }
+            )
+        self.checkEqual(the_page_lines, gold_page_lines)
+
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def test037ContestPrivateNotAllowed(self):
@@ -535,7 +590,19 @@ class TestBasics(unittest.TestCase):
         self.checkEqual(the_page_lines, gold_page_lines)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    def xxx040MissingUrl(self):
+    def test03zRootWithLogin(self):
+        (the_page_lines, gold_page_lines) = get_comparison(
+            SITE,
+            page_name(self.id()),
+            headers={'User-Agent': USERAGENT,
+                     'Cookie':user_cookie()
+                     }
+            )
+        self.checkEqual(the_page_lines, gold_page_lines)
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    def test040MissingUrl(self):
+        # no page output
         self.assertRaises(urllib2.HTTPError,
                           get_comparison,
                           SITE+'gobbledygook',
@@ -547,7 +614,8 @@ class TestBasics(unittest.TestCase):
                           )
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    def xxx050FinishContestsFail(self):
+    def test050FinishContestsFail(self):
+        # no page output
         self.assertRaises(urllib2.HTTPError,
                           get_comparison,
                           SITE+'admin/finish_any',
@@ -559,7 +627,7 @@ class TestBasics(unittest.TestCase):
                           )
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    def xxx051FinishContests(self):
+    def test051FinishContests(self):
         (the_page_lines, gold_page_lines) = get_comparison(
             SITE+'admin/finish_any',
             page_name(self.id()),
@@ -570,7 +638,18 @@ class TestBasics(unittest.TestCase):
         self.checkEqual(the_page_lines, gold_page_lines)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    def xxx060ContestsBadIndex(self):
+    def test05zRootWithLogin(self):
+        (the_page_lines, gold_page_lines) = get_comparison(
+            SITE,
+            page_name(self.id()),
+            headers={'User-Agent': USERAGENT,
+                     'Cookie':user_cookie()
+                     }
+            )
+        self.checkEqual(the_page_lines, gold_page_lines)
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    def test060ContestsBadIndex(self):
         (the_page_lines, gold_page_lines) = get_comparison(
             SITE+'contests?i=x3',
             page_name(self.id()),
@@ -582,10 +661,25 @@ class TestBasics(unittest.TestCase):
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 class TestLong(unittest.TestCase):
+    def checkEqual(self,the_page_lines,gold_page_lines):
+        for i in range(len(max(the_page_lines,gold_page_lines))):
+            gold_re_match = re.match(json_re,gold_page_lines[i])
+            page_re_match = re.match(json_re,the_page_lines[i])
+            if gold_re_match:
+                gold_json_string = gold_re_match.group(1)
+                if page_re_match is None:
+                    self.assertEqual(the_page_lines[i],gold_page_lines[i])
+                else:
+                    page_json_string = page_re_match.group(1)
+                    page_json = json.loads(page_json_string)
+                    gold_json = json.loads(gold_json_string)
+                    self.assertEqual(page_json,gold_json)
+            else:
+                self.assertEqual(the_page_lines[i],gold_page_lines[i])
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # extra long test
-    def xxx000AddLotsOfTests(self):
+    def test000AddLotsOfTests(self):
         print  >>sys.stderr, "\ntest long:",
         # add a gob of contests
         for month in [ '10', '11', '12' ]:
@@ -648,7 +742,7 @@ class TestLong(unittest.TestCase):
         self.checkEqual(the_page_lines, gold_page_lines)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    def xxx001ContestAddLotsOfPredictions(self):
+    def test001ContestAddLotsOfPredictions(self):
         for (i,v) in enumerate(range(55)):
             fetch_url(
                 SITE+'contest/21',

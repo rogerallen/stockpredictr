@@ -19,6 +19,7 @@
 
 import bisect
 import datetime as datetime_module
+import operator
 from django.utils import simplejson
 import webapp2 as webapp
 from google.appengine.api import memcache
@@ -348,7 +349,8 @@ def get_new_contest_key():
 
 # be careful.  contest updates need to update this list too
 def get_contests(contests_query,contest_str,start_index=0):
-  num = G_LIST_SIZE
+  logging.info("get_contests %s"%(contest_str))
+  num = G_LIST_SIZE # FIXME -- is this what we really want?
   mckey = contest_str
   contests = memcache.get(mckey)
   if contests is not None:
@@ -362,18 +364,16 @@ def get_contests(contests_query,contest_str,start_index=0):
   return contests[start_index:start_index+num] # in case cache has more
 
 def get_open_contests():
-  today = datetime_module.date.today()
-  return get_contests(db.GqlQuery("SELECT * FROM Contest " +
-                                  "WHERE close_date >= :1 " +
-                                  "ORDER BY close_date ASC", today),
-                      "open_contests")
+  return sorted(get_contests(db.GqlQuery("SELECT * FROM Contest " +
+                                         "WHERE final_value >= 0"),
+                             "open_contests"),
+                key=operator.attrgetter('close_date'))
 
 def get_closed_contests():
-  today = datetime_module.date.today()
-  return get_contests(db.GqlQuery("SELECT * FROM Contest " +
-                                  "WHERE close_date < :1 " +
-                                  "ORDER BY close_date DESC", today),
-                      "closed_contests")
+  return sorted(get_contests(db.GqlQuery("SELECT * FROM Contest " +
+                                         "WHERE final_value < 0"),
+                             "closed_contests"),
+                key=operator.attrgetter('close_date'))
 
 def get_all_contests(start_index):
   return get_contests(db.GqlQuery("SELECT * FROM Contest " +
@@ -387,7 +387,38 @@ def is_contest_at(index):
   logging.info("is_contest_at %d = %s"%(index,is_contest))
   return is_contest
 
-def update_contest_list(contest_str, contest, reversed_list=False):
+def remove_from_contest_list(contest_str, contest):
+  logging.info("remove_from_contest_list %s"%(contest_str))
+  contests = memcache.get(contest_str)
+  if contests is not None:
+    for (i,c) in enumerate(contests):
+      if c.key().id() == contest.key().id():
+        logging.info("remove_from_contest_list %d"%(i))
+        contests = contests[0:i] + contests[i+1:]
+        break
+    logging.info("remove_From_contest_list %s len=%d"%(contest_str,len(contests)))
+    if not memcache.set(contest_str,contests,CONTEST_CACHE_SECONDS):
+      logging.error('insert_into_contest_list:%s memcache set failure'%(contest_str))
+  else:
+    logging.warning("remove_from_contest_list: EMPTY contests")
+
+def update_contest_list(contest_str, contest):
+  logging.info("update_contest_list %s"%(contest_str))
+  contests = memcache.get(contest_str)
+  if contests is not None:
+    for (i,c) in enumerate(contests):
+      if c.key().id() == contest.key().id():
+        logging.info("update_contest_list %d"%(i))
+        contests = contests[0:i] + [contest] + contests[i+1:]
+        break
+  else:
+    contests = [contest]
+  logging.info("update_contest_list %s len=%d"%(contest_str,len(contests)))
+  if not memcache.set(contest_str,contests,CONTEST_CACHE_SECONDS):
+    logging.error('update_contest_list:%s memcache set failure'%(contest_str))
+
+def insert_into_contest_list(contest_str, contest, reversed_list=False):
+  logging.info("insert_into_contest_list %s"%(contest_str))
   contests = memcache.get(contest_str)
   if contests is not None:
     close_dates = [v.close_date for v in contests]
@@ -401,25 +432,60 @@ def update_contest_list(contest_str, contest, reversed_list=False):
     contests = [contest]
   #for i,c in enumerate(contests):
   #  logging.info("update_contest_list: %s %d %s"%(contest_str,i,c.key().id()))
+  logging.info("insert_into_contest_list %s len=%d"%(contest_str,len(contests)))
   if not memcache.set(contest_str,contests,CONTEST_CACHE_SECONDS):
-    logging.error('update_contest_list:%s memcache set failure'%(contest_str))
+    logging.error('insert_into_contest_list:%s memcache set failure'%(contest_str))
 
-def put_contest(contest):
+def add_contest_to_db(contest):
   contest_id = str(contest.key().id())
-  logging.info("put_contest:"+contest_id)
+  logging.info("add_contest_to_db:"+contest_id)
   contest.put()
   mckey = "contest"+contest_id
   if not memcache.set(mckey,contest,CONTEST_CACHE_SECONDS):
-    logging.error('put_contest:%s memcache set failure'%(mckey))
+    logging.error('add_contest_to_db:%s memcache set failure'%(mckey))
   # also insert into the open_contests & all_contests list.
   # first, force the memcache to be populated
   junk = get_open_contests()
   junk = get_all_contests(0)
   # then add the contest
-  update_contest_list("open_contests", contest)
-  update_contest_list("all_contests", contest, True)
+  insert_into_contest_list("open_contests", contest)
+  insert_into_contest_list("all_contests", contest, True)
   # this does seem a bit odd to do this...
   # keep thinking about this...
+
+def update_contest_in_db(contest):
+  contest_id = str(contest.key().id())
+  old_contest = get_contest_by_id(contest_id)
+  logging.info("update_contest_in_db:"+contest_id)
+  contest.put()
+  mckey = "contest"+contest_id
+  if not memcache.set(mckey,contest,CONTEST_CACHE_SECONDS):
+    logging.error('update_contest_in_db:%s memcache set failure'%(mckey))
+  # also insert into the open_contests & all_contests list.
+  # first, force the memcache to be populated
+  junk = get_open_contests()
+  junk = get_closed_contests()
+  junk = get_all_contests(0)
+  # then add the contest
+  contest_finished = contest.final_value > 0
+  old_contest_finished = old_contest.final_value > 0
+  contest_list_change = contest_finished ^ old_contest_finished
+  if contest_list_change:
+    if contest_finished:
+      logging.info("contest_list_changed and contest_finished")
+      remove_from_contest_list("open_contests", contest)
+      insert_into_contest_list("closed_contests", contest)
+      update_contest_list("all_contests", contest)
+    else:
+      logging.info("contest_list_changed and NOT contest_finished")
+      remove_from_contest_list("closed_contests", contest)
+      insert_into_contest_list("open_contests", contest)
+      update_contest_list("all_contests", contest)
+  else:
+    logging.info("NOT contest_list_changed")
+    update_contest_list("open_contests", contest)
+    update_contest_list("closed_contests", contest)
+    update_contest_list("all_contests", contest)
 
 def get_contest_by_id(contest_id):
   mckey = "contest"+contest_id
@@ -450,7 +516,7 @@ def add_contest(user,stock,close_date,is_private,passphrase):
     logging.info('this is a public contest')
     contest.salt       = None
     contest.hashphrase = None
-  put_contest(contest)
+  add_contest_to_db(contest)
   return contest
 
 
@@ -461,7 +527,7 @@ def finish_contest(contest, final_value):
   """
   logging.info("Closing contest %s %s fv=%s" % (contest.owner_id, contest.stock_symbol, final_value))
   contest.final_value = final_value
-  put_contest(contest)
+  update_contest_in_db(contest)
   min_pred = 100000.0
   predictions = get_predictions(contest)
   for prediction in predictions:
@@ -476,6 +542,7 @@ def finish_contest(contest, final_value):
     if not memcache.set(mckey,prediction,PREDICTION_CACHE_SECONDS):
       logging.error('finish_contest: %s memcache set failure'%(mckey))
   mckey = "predictions"+str(contest.key().id())
+  logging.info("SET %s"%(mckey))
   if not memcache.set(mckey,predictions,CONTEST_CACHE_SECONDS):
     logging.error('finish_contest: %s memcache set failure'%(mckey))
 
@@ -504,6 +571,7 @@ def get_predictions(contest,start_index=0,num=G_LIST_SIZE):
   "return all or 'num' predictions"
   contest_id = str(contest.key().id())
   mckey = "predictions"+contest_id
+  logging.info("GET %s"%(mckey))
   predictions = memcache.get(mckey)
   if predictions is not None:
     logging.info("get_predictions %s from memcache"%(contest_id))
@@ -514,6 +582,7 @@ def get_predictions(contest,start_index=0,num=G_LIST_SIZE):
                                     "ORDER BY value DESC",
                                     contest_id)
     predictions = predictions_query.fetch(1000) # HACK
+    logging.info("SET %s"%(mckey))
     if not memcache.set(mckey,predictions,PREDICTION_CACHE_SECONDS):
       logging.error('get_predictions %s memcache set failure'%(contest_id))
   # only return num predictions, unless num == 0
@@ -571,6 +640,7 @@ def _update_predictions(contest,prediction):
   else:
     predictions = [prediction]
   mckey = "predictions"+str(contest.key().id())
+  logging.info("SET %s"%(mckey))
   if not memcache.set(mckey,predictions,CONTEST_CACHE_SECONDS):
     logging.error('update_predictions:%s memcache set failure'%(mckey))
 
