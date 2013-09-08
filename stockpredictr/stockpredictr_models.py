@@ -488,7 +488,7 @@ def update_contest_in_db(contest):
     update_contest_list("all_contests", contest)
 
 def get_contest_by_id(contest_id):
-  mckey = "contest"+contest_id
+  mckey = "contest"+str(contest_id)
   contest = memcache.get(mckey)
   if contest is not None:
     logging.info("get_contest_by_id %s from memcache"%(contest_id))
@@ -580,7 +580,7 @@ def get_predictions(contest,start_index=0,num=G_LIST_SIZE):
     predictions_query = db.GqlQuery("SELECT * FROM Prediction " +
                                     "WHERE contest_id = :1 " +
                                     "ORDER BY value DESC",
-                                    contest_id)
+                                    int(contest_id))
     predictions = predictions_query.fetch(1000) # HACK
     logging.info("SET %s"%(mckey))
     if not memcache.set(mckey,predictions,PREDICTION_CACHE_SECONDS):
