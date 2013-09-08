@@ -529,7 +529,7 @@ def finish_contest(contest, final_value):
   contest.final_value = final_value
   update_contest_in_db(contest)
   min_pred = 100000.0
-  predictions = get_predictions(contest)
+  predictions = get_predictions(contest,0,0)
   for prediction in predictions:
     delta = abs(prediction.value - contest.final_value)
     if min_pred > delta:
@@ -586,6 +586,7 @@ def get_predictions(contest,start_index=0,num=G_LIST_SIZE):
     if not memcache.set(mckey,predictions,PREDICTION_CACHE_SECONDS):
       logging.error('get_predictions %s memcache set failure'%(contest_id))
   # only return num predictions, unless num == 0
+  logging.info("num predictions = %d. returning %d"%(len(predictions),num))
   if num > 0:
     return predictions[start_index:start_index+num] # in case cache has more
   else:
@@ -625,7 +626,7 @@ def get_prediction(myuser,contest):
 
 def _update_predictions(contest,prediction):
   "keep the predictions list memcache in sync with latest update"
-  predictions = get_predictions(contest)
+  predictions = get_predictions(contest,0,0)
   # remove prediction if it is in the list currently
   for i,p in enumerate(predictions):
     if prediction.key() == p.key():
@@ -687,9 +688,9 @@ def get_faux_predictions(contest,
   json_data["predictions"] = []
   min_pred = 100000.0
   if open_flag:
-    for (i,p) in enumerate(get_predictions(contest)):
+    for (i,p) in enumerate(get_predictions(contest,0,0)):
       min_pred = min(min_pred,abs(p.value - stock_price))
-  for (i,p) in enumerate(get_predictions(contest)):
+  for (i,p) in enumerate(get_predictions(contest,0,0)):
     is_leader = False
     if open_flag:
       if min_pred == abs(p.value - stock_price):

@@ -160,11 +160,14 @@ class HandleContest(webapp.RequestHandler):
         # refers to the values of the predictions which is reverse sorted
         # so "prev"=="higher" and "next"=="lower".  A bit confusing, so be
         # careful.
-        prev_index = max(0,cur_index-prediction_count)
+        prev_index = max(0,cur_index-1)
         prev_predictions_flag = ((prev_index < cur_index) and
                                  len(get_predictions(contest,prev_index,1)) == 1)
-        next_index = cur_index+prediction_count # FIXME? difference
+        next_index = cur_index+prediction_count
         next_predictions_flag = len(get_predictions(contest,next_index,1)) == 1
+
+        logging.info("GetContest cur_index=%d prev_index=%d next_index=%d"%(cur_index,prev_index,next_index))
+        logging.info("GetContest prev_prediction_flag=%s next_prediciton_flag=%s"%(prev_predictions_flag,next_predictions_flag))
 
         stock_name = contest.stock_symbol
         if open_flag:
