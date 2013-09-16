@@ -599,6 +599,9 @@ def get_myuser_predictions(myuser):
     "SELECT * FROM Prediction WHERE user_id = :1 ORDER BY contest_id DESC",
     myuser.key().id())
   predictions = prediction_query.fetch(1000) # HACK
+  # add contest
+  for p in predictions:
+    p.contest = get_contest_by_id(p.contest_id)
   return predictions
 
 def get_prediction(myuser,contest):
