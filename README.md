@@ -20,3 +20,5 @@ At work, we often have a little fun trying to guess the stock price
 movement after we announce quarterly results. You might think this is
 simple, but you would be wrong! The stock price often behaves in quite
 unexpected ways! Try it out and see for yourself.
+
+[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/rogerallen/stockpredictr/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
