@@ -171,7 +171,7 @@ def get_stock_price_from_web(symbol):
     logging.info("stock response = %s" % (tmp))
     stock_data = json.loads(tmp)
     if len(stock_data) > 0:
-      stock_price = float(stock_data[0]["l"])
+      stock_price = float(stock_data[0]["l"].replace(',',''))
     else:
       stock_price = "Unknown"
   else:
