@@ -21,13 +21,15 @@ stockpredictr.py - main code for handling the http://stockpredictr.appspot.com/
 website via google's app engine system.
 """
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# changed to use appengine_config.py
+#
 # even though I don't use django, apparently I need to pick the version
 # see http://code.google.com/appengine/docs/python/tools/libraries.html#Django
-import os
-os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
-
-from google.appengine.dist import use_library
-use_library('django', '1.2')
+#import os
+#os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
+#
+#from google.appengine.dist import use_library
+#use_library('django', '1.2')
 #use_library('django', '0.96')
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

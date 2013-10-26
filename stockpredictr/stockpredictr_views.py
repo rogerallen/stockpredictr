@@ -21,7 +21,6 @@ import datetime as datetime_module
 import webapp2 as webapp
 from google.appengine.ext import db
 from google.appengine.ext.webapp import template
-from django.utils import simplejson
 
 from stockpredictr_config import *
 from stockpredictr_utils import *

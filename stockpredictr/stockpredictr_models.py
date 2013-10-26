@@ -20,7 +20,8 @@
 import bisect
 import datetime as datetime_module
 import operator
-from django.utils import simplejson
+#from django.utils import simplejson
+import json
 import webapp2 as webapp
 from google.appengine.api import memcache
 from google.appengine.api import users
@@ -168,7 +169,7 @@ def get_stock_price_from_web(symbol):
   if stock_price_result.status_code == 200:
     tmp = stock_price_result.content.replace('// ','')
     logging.info("stock response = %s" % (tmp))
-    stock_data = simplejson.loads(tmp)
+    stock_data = json.loads(tmp)
     if len(stock_data) > 0:
       stock_price = float(stock_data[0]["l"])
     else:
@@ -720,6 +721,6 @@ def get_faux_predictions(contest,
     'name': contest.stock_symbol.replace(' ','\n'),
     'value': get_price_str(stock_price)[1:] # drop '$'
     }
-  json_data = simplejson.dumps(json_data)
+  json_data = json.dumps(json_data)
   return (faux_predictions,
           json_data)
