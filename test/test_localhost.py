@@ -26,7 +26,7 @@ from stockpredictr_config import G_LIST_SIZE
 # global switch to write gilded files
 GILD = False
 # global for the sitename.  put in config file someday
-SITE = 'http://localhost:8080/'
+SITE = 'http://localhost:8081/'
 
 # FIXME
 FUTYEAR = '2015'
@@ -635,6 +635,8 @@ class TestBasics(unittest.TestCase):
                      'Cookie':admin_cookie()
                      }
             )
+        # this makes comparison easier
+        the_page_lines += ['']
         self.checkEqual(the_page_lines, gold_page_lines)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

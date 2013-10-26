@@ -15,8 +15,10 @@ COVERAGE=env coverage
 # start webserver with a clear cache
 APPSERVER=/usr/local/bin/dev_appserver.py \
   --host=0.0.0.0 \
-  --port=8080 \
+  --port=8081 \
+  --admin_port=8001 \
   --clear_datastore=True \
+  --storage_path ./storage \
   --skip_sdk_update_check=True \
   ../stockpredictr
 
