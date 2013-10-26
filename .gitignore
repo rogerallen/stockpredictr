@@ -1,0 +1,6 @@
+stockpredictr/*pyc
+stockpredictr/index.yaml
+test/lead/*
+test/storage/*
+test/.coverage
+test/server_output.txt
