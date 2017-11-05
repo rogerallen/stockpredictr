@@ -163,8 +163,9 @@ def get_stock_price_from_web(symbol):
     return 12.0625
   if symbol == 'FAIL':
     return "Unknown"
-  # FIXME -- eventually google finance will go away?
-  stock_price_url = "http://finance.google.com/finance/info?client=ig&q=%s" % (symbol)
+  # https://stackoverflow.com/questions/46070126/google-finance-json-stock-quote-stopped-working
+  # Sweet!  The updated URL seems to output the same JSON data
+  stock_price_url = "http://finance.google.com/finance?q=%s&output=json" % (symbol)
   stock_price_result = urlfetch.fetch(stock_price_url)
   if stock_price_result.status_code == 200:
     tmp = stock_price_result.content.replace('// ','')
