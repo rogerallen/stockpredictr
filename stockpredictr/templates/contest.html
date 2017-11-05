@@ -193,8 +193,8 @@
   </body>
   <script type="text/javascript">
     window.onload = function() {
-      var width = 600;
-      var height = 500;
+      var width = 640;
+      var height = 800;
       paper = Raphael("linegraph",width,height);
       json = {% autoescape off %} {{ json_data }} {% endautoescape %};
       var numline = new StockNumline();

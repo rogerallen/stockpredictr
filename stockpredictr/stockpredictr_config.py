@@ -1,6 +1,6 @@
 # stockpredictr_config.py
 #
-# Copyright (C) 2009-2013 Roger Allen (rallen@gmail.com)
+# Copyright (C) 2009-2017 Roger Allen (rallen@gmail.com)
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -18,10 +18,10 @@
 # 02110-1301, USA.
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-G_LIST_SIZE=25
+G_LIST_SIZE=50
 
 g_footer = """
-<p>Copyright (c) 2009-2013 Roger Allen. All rights reserved.
+<p>Copyright (c) 2009-2017 Roger Allen. All rights reserved.
 Design by <a href="http://www.freecsstemplates.org/">Free CSS Templates</a>.</p>
 """
 

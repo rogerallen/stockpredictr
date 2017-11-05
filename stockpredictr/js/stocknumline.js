@@ -48,12 +48,12 @@ Numline.prototype.set_minmax = function() {
 
 Numline.prototype.construct_center_line = function() {
     // center line
-    var center_line = this.paper.path([["M", this.center_line_x, 0], 
+    var center_line = this.paper.path([["M", this.center_line_x, 0],
                                    ["L", this.center_line_x, this.window_height]]);
     for(i=Math.ceil(this.value_min); i < this.value_max; i += 1) {
         this.paper.path([["M", this.center_line_x-5, this.scaled_y(i)],
                      ["L", this.center_line_x+5, this.scaled_y(i)]]);
-        t = this.paper.text(this.center_line_x, this.scaled_y(i), 
+        t = this.paper.text(this.center_line_x, this.scaled_y(i),
                         i+".00");
         t.attr('font',this.font);
         t.translate(-t.getBBox().width/2-8, 0);
@@ -146,7 +146,7 @@ Datapoint.prototype.construct = function(label_x,label_y,value_x,value_y) {
     this.paper_text.translate(dp_direction*this.paper_text.getBBox().width/2, 0);
     this.paper_arrow = this.arrow(dp_x1,dp_y1,
                                   dp_x2,dp_y2,
-                                  dp_arrow1, dp_arrow2); 
+                                  dp_arrow1, dp_arrow2);
     if(this._highlight) {
         this.paper_arrow.attr("stroke-width","2");
     }
@@ -176,8 +176,8 @@ Datapoint.prototype.arrow = function(x1,y1,x2,y2,arrow1,arrow2) {
 // ======================================================================
 function StockNumline() {
     this.font = '14px Verdana';
-    this.numline = new Numline(100.0,this.font);
-} 
+    this.numline = new Numline(120.0,this.font);
+}
 
 StockNumline.prototype.construct = function(paper,data,w,h) {
     var datapoints = new Array();
@@ -196,8 +196,4 @@ StockNumline.prototype.construct = function(paper,data,w,h) {
         }
     }
     this.numline.construct(paper,datapoints,w,h)
-}    
-
-
-
-
+}

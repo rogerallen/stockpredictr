@@ -1,6 +1,6 @@
 # stockpredictr_models.py
 #
-# Copyright (C) 2009-2013 Roger Allen (rallen@gmail.com)
+# Copyright (C) 2009-2017 Roger Allen (rallen@gmail.com)
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
