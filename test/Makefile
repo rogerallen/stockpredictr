@@ -9,11 +9,12 @@
 #     and copy over new & better pages to gold for checkin.
 #
 
+# FIXME -- this wasn't working in the past, so deprecate and try again in the future
 # path for coverage tool.  See http://nedbatchelder.com/code/coverage/
 COVERAGE=env coverage
 
 # start webserver with a clear cache
-APPSERVER=/usr/local/bin/dev_appserver.py \
+APPSERVER=../../google-cloud-sdk/bin/dev_appserver.py \
   --host=0.0.0.0 \
   --port=8081 \
   --admin_port=8001 \
@@ -28,11 +29,11 @@ SERVER_STOP_ALLOWANCE=5
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # main entry points
-test:	start_webserver start_wait run_test stop_wait kill_webserver stop_wait stdoutcov
+test:	start_webserver start_wait run_test stop_wait kill_webserver stop_wait #stdoutcov
 
-quick:	start_webserver start_wait run_quick_test stop_wait kill_webserver stop_wait stdoutcov
+quick:	start_webserver start_wait run_quick_test stop_wait kill_webserver stop_wait #stdoutcov
 
-simple: start_webserver start_wait run_simple_test stop_wait kill_webserver stop_wait stdoutcov
+simple: start_webserver start_wait run_simple_test stop_wait kill_webserver stop_wait #stdoutcov
 
 gild:	start_webserver start_wait run_gild stop_wait kill_webserver
 
@@ -70,7 +71,8 @@ stdoutcov:
 start_webserver:
 	@/bin/echo -n "Starting Server: "
 	@date
-	@${COVERAGE} run --omit=/Applications --source=../stockpredictr --branch ${APPSERVER} >& server_output.txt &
+	# @${COVERAGE} run --omit=/Applications --source=../stockpredictr --branch ${APPSERVER} >& server_output.txt &
+	${APPSERVER} >& server_output.txt &
 
 kill_webserver:
 	@echo kill -15 `ps |grep dev_appserver.py |grep -v grep | cut -c 1-6`

@@ -28,8 +28,8 @@ GILD = False
 # global for the sitename.  put in config file someday
 SITE = 'http://localhost:8081/'
 
-# FIXME
-FUTYEAR = '2015'
+# FIXME this is fragile!
+FUTYEAR = '2037' # has same dates as 2015
 
 # not sure this is necessary
 USERAGENT = "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.6; en-US; rv:1.9.2.3) Gecko/20100401 Firefox/3.6.3,gzip(gfe)"
@@ -120,7 +120,9 @@ class TestBasics(unittest.TestCase):
                     gold_json = json.loads(gold_json_string)
                     self.assertEqual(page_json,gold_json)
             else:
-                self.assertEqual(the_page_lines[i],gold_page_lines[i])
+                #if the_page_lines[i].startswith('<p>Copyright'):
+                #    continue
+                self.assertEqual(the_page_lines[i].strip(),gold_page_lines[i].strip())
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def test000RootNoLogin(self):
