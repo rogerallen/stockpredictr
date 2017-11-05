@@ -366,15 +366,16 @@ def get_contests(contests_query,contest_str,start_index=0):
 
 def get_open_contests():
   return sorted(get_contests(db.GqlQuery("SELECT * FROM Contest " +
-                                         "WHERE final_value >= 0"),
+                                         "WHERE final_value < 0.0"),
                              "open_contests"),
                 key=operator.attrgetter('close_date'))
 
 def get_closed_contests():
   return sorted(get_contests(db.GqlQuery("SELECT * FROM Contest " +
-                                         "WHERE final_value < 0"),
+                                         "WHERE final_value >= 0.0"),
                              "closed_contests"),
-                key=operator.attrgetter('close_date'))
+                key=operator.attrgetter('close_date'),
+                reverse=True)
 
 def get_all_contests(start_index):
   return get_contests(db.GqlQuery("SELECT * FROM Contest " +
