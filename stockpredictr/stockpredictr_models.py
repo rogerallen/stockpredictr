@@ -163,16 +163,18 @@ def get_stock_price_from_web(symbol):
     return 12.0625
   if symbol == 'FAIL':
     return "Unknown"
-  # https://stackoverflow.com/questions/46070126/google-finance-json-stock-quote-stopped-working
-  # Sweet!  The updated URL seems to output the same JSON data
-  stock_price_url = "http://finance.google.com/finance?q=%s&output=json" % (symbol)
+  # Thank you iextrading!
+  stock_price_url = "https://api.iextrading.com/1.0/stock/%s/quote" % (symbol)
   stock_price_result = urlfetch.fetch(stock_price_url)
   if stock_price_result.status_code == 200:
-    tmp = stock_price_result.content.replace('// ','')
+    tmp = stock_price_result.content#.replace('// ','')
     logging.info("stock response = %s" % (tmp))
-    stock_data = json.loads(tmp)
-    if len(stock_data) > 0:
-      stock_price = float(stock_data[0]["l"].replace(',',''))
+    try:
+      stock_data = json.loads(tmp)
+    except ValueError:
+      stock_data = {} # empty
+    if len(stock_data.keys()) > 0:
+      stock_price = float(stock_data["latestPrice"])
     else:
       stock_price = "Unknown"
   else:
